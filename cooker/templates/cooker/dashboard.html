@@ -411,7 +411,13 @@
         
         #pressureBtn {
             width: 100%;
-            cursor: pointer
+            cursor: pointer;
+            font: inherit;
+            -webkit-tap-highlight-color: transparent
+        }
+        
+        #pressureBtn * {
+            pointer-events: none
         }
         
         #pressureTxt {
@@ -440,11 +446,11 @@
             transition: .2s
         }
         
-        [data-pr="1"] .sw {
+        #pressureBtn.on .sw {
             background: var(--mint)
         }
         
-        [data-pr="1"] .sw::after {
+        #pressureBtn.on .sw::after {
             left: 23px;
             background: #fff
         }
@@ -478,8 +484,7 @@
             transform: translateY(-2px)
         }
         
-        #foodRow>*::before {
-            content: attr(data-e);
+        #foodRow .ic {
             font-size: 1.9rem;
             line-height: 1.2
         }
@@ -720,15 +725,56 @@
         
         #qrBox {
             background: #fff;
-            padding: 10px;
+            padding: 18px;
             border-radius: 16px;
             line-height: 0;
             display: inline-block
         }
         
+        #qrImg {
+            display: block;
+            width: 220px;
+            height: auto;
+            aspect-ratio: 1/1;
+            max-width: none;
+            background: #fff;
+            filter: none;
+            opacity: 1
+        }
+        
+        #qrBox {
+            cursor: zoom-in
+        }
+        
+        #qrModal .modal-dialog {
+            max-width: 340px;
+            transition: max-width .2s
+        }
+        
+        #qrModal.qrbig .modal-dialog {
+            max-width: min(540px, 94vw)
+        }
+        
+        #qrModal.qrbig #qrBox {
+            cursor: zoom-out
+        }
+        
         .ss3 .toast {
             background: var(--bg)!important;
-            border-radius: 14px
+            border-radius: 14px;
+            border-color: var(--mint)!important
+        }
+        
+        .ss3 .toast.err {
+            background: #4a1d1d!important;
+            border-color: var(--rose)!important
+        }
+        
+        .chip:disabled,
+        .dock .btn:disabled,
+        #pressureBtn:disabled {
+            opacity: .55;
+            cursor: wait
         }
         
         .pulse {
@@ -835,7 +881,7 @@
                     </div>
                     <div class="hint">Output to heating element</div>
                 </div>
-                <button class="card2 stat" id="pressureBtn"><div class="lbl"><span class="ico i-m"><i class="bi bi-speedometer2"></i></span>Pressure</div>
+                <button type="button" class="card2 stat" id="pressureBtn"><div class="lbl"><span class="ico i-m"><i class="bi bi-speedometer2"></i></span>Pressure</div>
       <div class="big" id="pressureTxt">off</div><span class="sw"></span><div class="hint">Tap to toggle</div></button>
             </div>
         </div>
@@ -899,14 +945,16 @@
     </div>
 
     <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width:340px">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center p-4">
                 <div class="fw-bold mb-3">Scan to open on your phone</div>
                 <div>
-                    <div id="qrBox"><img id="qrImg" alt="QR code" width="180" height="180"></div>
+                    <div id="qrBox" title="Tap to enlarge"><img id="qrImg" alt="QR code"></div>
                 </div>
+                <div id="qrErr" class="small text-danger mt-2 d-none">QR image could not load. Try Open full size.</div>
+                <a id="qrOpen" class="btn btn-sm mt-3 text-white fw-bold" style="background:linear-gradient(135deg,#ff8a4c,#f2541b)" target="_blank" rel="noopener"><i class="bi bi-arrows-fullscreen me-1"></i>Open full size</a>
                 <div id="lanUrl" class="small text-secondary text-break mt-3">--</div>
-                <div class="small text-secondary mt-2">All devices control the same cooker.</div>
+                <div class="small text-secondary mt-2">Tap the code to enlarge. All devices control the same cooker.</div>
             </div>
         </div>
     </div>
@@ -945,22 +993,26 @@
             const ACT = '.active,.on,.selected,.is-active,[aria-pressed="true"],[aria-checked="true"]';
             const C = 2 * Math.PI * 96,
                 root = document.documentElement;
+            const cap = w => w.charAt(0) + w.slice(1).toLowerCase();
 
             function deco() {
-                document.querySelectorAll('#foodRow>*').forEach(b => {
-                    const k = Object.keys(F).find(k => b.textContent.toLowerCase().includes(k));
-                    if (k && !b.dataset.e) {
-                        b.dataset.e = F[k][0];
-                        b.dataset.m = F[k][1];
-                        if (F[k][2]) b.dataset.p = 1
+                document.querySelectorAll('#foodRow>[data-food]').forEach(b => {
+                    const f = F[b.dataset.food];
+                    if (f && !b.dataset.e) {
+                        b.dataset.e = f[0];
+                        b.dataset.m = f[1];
+                        if (f[2]) b.dataset.p = 1
                     }
                 });
-                document.querySelectorAll('#modeRow>*').forEach(b => {
-                    const k = Object.keys(M).find(k => b.textContent.toLowerCase().includes(k));
-                    if (k) b.dataset.s = M[k]
+                document.querySelectorAll('#modeRow>[data-mode]').forEach(b => {
+                    const k = b.dataset.mode.toLowerCase(),
+                        t = cap(b.dataset.mode);
+                    b.dataset.s = M[k] || '';
+                    if (b.textContent !== t) b.textContent = t
                 });
-                const a = $('#foodRow ' + ACT);
-                $('#foodNow').textContent = a ? ((a.dataset.e || '') + ' ' + a.textContent.trim()) : '';
+                const a = $('#foodRow>.on'),
+                    ic = a && a.querySelector('.ic');
+                $('#foodNow').textContent = a ? ((ic ? ic.textContent + ' ' : '') + cap(a.dataset.food)) : '';
             }
 
             function sync() {
@@ -975,7 +1027,7 @@
                 $('#ckState').textContent = st;
                 document.querySelectorAll('.ph').forEach(p => p.classList.toggle('on', p.dataset.s === st));
                 $('#capPct').textContent = Math.round(num('#energy') / 0.5 * 100);
-                const pr = /^on/i.test($('#pressureTxt').textContent.trim());
+                const pr = $('#pressureBtn').classList.contains('on');
                 document.body.dataset.pr = pr ? 1 : 0;
                 document.body.dataset.heat = (num('#power') > 0 && st !== 'IDLE') ? 1 : 0;
             }
@@ -992,6 +1044,55 @@
                 document.querySelectorAll('.chart-box').forEach(x => x.classList.toggle('on', !!x.querySelector('#' + b.dataset.c)));
                 window.dispatchEvent(new Event('resize'))
             });
+            /* Show the QR at a whole-number multiple of its real size so the squares stay sharp and scannable */
+            const qi = $('#qrImg'),
+                qm = $('#qrModal'),
+                qb = document.body.dataset.qrUrl,
+                bust = u => u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
+
+            function fitQr() {
+                const n = qi.naturalWidth;
+                if (!n) return;
+                const T = Math.min(qm.classList.contains('qrbig') ? 440 : 240, innerWidth - 100);
+                qi.style.height = 'auto';
+                if (n <= T) {
+                    qi.style.width = n * Math.max(1, Math.floor(T / n)) + 'px';
+                    qi.style.imageRendering = 'pixelated'
+                } else {
+                    qi.style.width = T + 'px';
+                    qi.style.imageRendering = 'auto'
+                }
+            }
+
+            function qrLoad() {
+                if (qi.complete && qi.getAttribute('src') && !qi.naturalWidth) qi.src = bust(qi.getAttribute('src'));
+                $('#qrOpen').href = qi.getAttribute('src') || '#';
+                fitQr()
+            }
+            qi.addEventListener('load', () => {
+                $('#qrErr').classList.add('d-none');
+                $('#qrOpen').href = qi.currentSrc || qi.src;
+                fitQr()
+            });
+            qi.addEventListener('error', () => {
+                const s = qi.getAttribute('src');
+                if (!qi.dataset.r && s) {
+                    qi.dataset.r = 1;
+                    qi.src = bust(s)
+                } else $('#qrErr').classList.remove('d-none')
+            });
+            qm.addEventListener('show.bs.modal', () => {
+                qm.classList.remove('qrbig');
+                delete qi.dataset.r;
+                qrLoad()
+            });
+            $('#qrBox').onclick = () => {
+                qm.classList.toggle('qrbig');
+                setTimeout(fitQr, 30)
+            };
+            addEventListener('resize', fitQr);
+            fitQr();
+            if (new URLSearchParams(location.search).has('simple')) $('#tabs').style.display = 'none';
             const th = localStorage.getItem('ss-theme');
             if (th) root.dataset.bsTheme = th;
             $('#themeBtn').onclick = () => {
