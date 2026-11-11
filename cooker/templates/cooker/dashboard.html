@@ -1,151 +1,1008 @@
-{% load static %}<!DOCTYPE html>
+{% load static %}
+<!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#e94560">
-<title>Sizzle Sense - Smart Cooker</title>
-<link rel="manifest" href="{% url 'manifest' %}">
-<link rel="icon" href="{% url 'icon_svg' %}" type="image/svg+xml">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="{% static 'cooker/css/app.css' %}" rel="stylesheet">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#1c1410">
+    <title>Sizzle Sense - Smart Cooker</title>
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <link rel="icon" href="{% url 'icon_svg' %}" type="image/svg+xml">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+         :root {
+            --bg: #1c1410;
+            --card: rgba(255, 255, 255, .055);
+            --card2: rgba(255, 255, 255, .09);
+            --line: rgba(255, 255, 255, .1);
+            --tx: #f6efe9;
+            --mu: #b0a198;
+            --fire: #ff6b2c;
+            --amb: #ffb02e;
+            --mint: #3ddbb4;
+            --rose: #ff5d5d;
+            --track: rgba(255, 255, 255, .1);
+            --shadow: 0 18px 40px rgba(0, 0, 0, .35)
+        }
+        
+        [data-bs-theme=light] {
+            --bg: #fbf4ee;
+            --card: rgba(255, 255, 255, .8);
+            --card2: #fff;
+            --line: rgba(60, 30, 10, .12);
+            --tx: #2b1a10;
+            --mu: #7d6a5d;
+            --track: rgba(60, 30, 10, .1);
+            --shadow: 0 14px 30px rgba(120, 60, 20, .12)
+        }
+        
+        body.ss3 {
+            font-family: 'Outfit', system-ui, sans-serif;
+            color: var(--tx);
+            min-height: 100vh;
+            padding-bottom: 110px;
+            background: radial-gradient(800px 480px at 0 -5%, rgba(255, 107, 44, .2), transparent 60%), radial-gradient(700px 500px at 100% 0, rgba(255, 176, 46, .12), transparent 60%), var(--bg);
+            background-attachment: fixed
+        }
+        
+        .ss3 .text-secondary {
+            color: var(--mu)!important
+        }
+        
+        .ss3 .serif,
+        .ss3 h1,
+        .ss3 .big {
+            font-family: 'Fraunces', Georgia, serif
+        }
+        
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 14px 14px calc(14px + env(safe-area-inset-top, 0px))
+        }
+        
+        .card2 {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 18px;
+            color: var(--tx);
+            text-align: left
+        }
+        
+        .lbl {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--mu)
+        }
+        
+        .ico {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            font-size: 1rem;
+            flex: none
+        }
+        
+        .i-a {
+            background: linear-gradient(135deg, #ffc247, #ff9d1c)
+        }
+        
+        .i-f {
+            background: linear-gradient(135deg, #ff8a4c, #f2541b)
+        }
+        
+        .i-m {
+            background: linear-gradient(135deg, #4de6c0, #1fb08c)
+        }
+        /* header */
+        
+        .top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+        
+        .logo {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-size: 1.5rem;
+            color: #fff;
+            background: linear-gradient(135deg, #ff8a4c, #f2541b);
+            box-shadow: 0 8px 22px rgba(242, 84, 27, .45)
+        }
+        
+        .top h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.1
+        }
+        
+        .top h1 span {
+            color: var(--fire)
+        }
+        
+        .top .sub {
+            font-size: .75rem;
+            color: var(--mu)
+        }
+        
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--tx);
+            border-radius: 99px;
+            padding: 6px 12px;
+            font-size: .78rem;
+            font-weight: 600
+        }
+        
+        .sq {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--tx);
+            display: grid;
+            place-items: center;
+            cursor: pointer
+        }
+        /* layout */
+        
+        .grid {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 1.15fr 1fr
+        }
+        
+        .stats {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 1fr 1fr;
+            align-content: start
+        }
+        
+        .stats .wide {
+            grid-column: 1/-1
+        }
+        
+        @media(max-width:820px) {
+            .grid,
+            .stats {
+                grid-template-columns: 1fr
+            }
+            .stats {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+        /* hero */
+        
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            align-items: center
+        }
+        
+        @media(max-width:560px) {
+            .hero {
+                grid-template-columns: 1fr
+            }
+        }
+        
+        .pills {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 6px
+        }
+        
+        .pills .badge {
+            border-radius: 99px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            font-size: .72rem;
+            padding: .55em 1em;
+            background: var(--card2)!important;
+            color: var(--mu)!important;
+            border: 1px solid var(--line)
+        }
+        
+        .pills #stateBadge:not(.st-IDLE) {
+            background: linear-gradient(135deg, #ffa12e, #f2760f)!important;
+            color: #fff!important;
+            border-color: transparent
+        }
+        
+        .pills .food {
+            margin-left: auto;
+            font-weight: 700;
+            font-size: .9rem
+        }
+        
+        .cooker {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            display: block;
+            overflow: visible
+        }
+        
+        .steam {
+            opacity: 0;
+            fill: none;
+            stroke: var(--mu);
+            stroke-width: 5;
+            stroke-linecap: round
+        }
+        
+        [data-heat="1"] .steam {
+            opacity: .7;
+            animation: st 2.4s ease-in-out infinite
+        }
+        
+        .steam:nth-child(2) {
+            animation-delay: .5s
+        }
+        
+        .steam:nth-child(3) {
+            animation-delay: 1s
+        }
+        
+        @keyframes st {
+            0% {
+                transform: translateY(8px);
+                opacity: 0
+            }
+            40% {
+                opacity: .7
+            }
+            100% {
+                transform: translateY(-14px);
+                opacity: 0
+            }
+        }
+        
+        .glow {
+            opacity: 0;
+            transition: opacity .6s
+        }
+        
+        [data-heat="1"] .glow {
+            opacity: 1
+        }
+        
+        .lamp {
+            fill: #6b5a50
+        }
+        
+        [data-pr="1"] .lamp {
+            fill: #ffe3a1;
+            filter: drop-shadow(0 0 6px #ffb02e)
+        }
+        
+        .ring {
+            width: 100%;
+            max-width: 230px;
+            margin: 0 auto;
+            display: block
+        }
+        
+        .rbox {
+            position: relative
+        }
+        
+        .rbox .in {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+        
+        .big {
+            font-weight: 800;
+            line-height: 1
+        }
+        
+        .bar {
+            height: 7px;
+            border-radius: 99px;
+            background: var(--track);
+            overflow: hidden
+        }
+        
+        .bar>div,
+        .progress-bar {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #ff6b2c, #ffb02e);
+            transition: width .5s
+        }
+        
+        .ss3 .progress {
+            height: 7px;
+            background: var(--track);
+            border-radius: 99px
+        }
+        
+        .phases {
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px dashed var(--line);
+            margin-top: 14px;
+            padding-top: 14px
+        }
+        
+        .ph {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--mu)
+        }
+        
+        .ph i {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--card2);
+            border: 1px solid var(--line);
+            display: grid;
+            place-items: center
+        }
+        
+        .ph.on {
+            color: var(--tx)
+        }
+        
+        .ph.on i {
+            background: linear-gradient(135deg, #ff8a4c, #f2541b);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 0 0 5px rgba(255, 107, 44, .2)
+        }
+        /* stat cards */
+        
+        .stat .big {
+            font-size: 2.1rem;
+            margin: 12px 0 8px
+        }
+        
+        .stat .big small {
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--mu);
+            font-family: 'Outfit', sans-serif
+        }
+        
+        .stat .hint {
+            font-size: .78rem;
+            color: var(--mu);
+            margin-top: 8px
+        }
+        
+        #pressureBtn {
+            width: 100%;
+            cursor: pointer
+        }
+        
+        #pressureTxt {
+            text-transform: capitalize
+        }
+        
+        .sw {
+            display: block;
+            width: 46px;
+            height: 26px;
+            border-radius: 99px;
+            background: var(--track);
+            position: relative;
+            transition: .2s
+        }
+        
+        .sw::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #d8c9bf;
+            transition: .2s
+        }
+        
+        [data-pr="1"] .sw {
+            background: var(--mint)
+        }
+        
+        [data-pr="1"] .sw::after {
+            left: 23px;
+            background: #fff
+        }
+        /* food + mode */
+        
+        #foodRow {
+            display: grid!important;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px!important;
+            margin-top: 14px
+        }
+        
+        #foodRow>* {
+            position: relative;
+            display: flex!important;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            padding: 14px 8px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: var(--card2);
+            color: var(--tx);
+            font-weight: 700;
+            font-size: .95rem;
+            cursor: pointer;
+            transition: .18s
+        }
+        
+        #foodRow>*:hover {
+            transform: translateY(-2px)
+        }
+        
+        #foodRow>*::before {
+            content: attr(data-e);
+            font-size: 1.9rem;
+            line-height: 1.2
+        }
+        
+        #foodRow>*::after {
+            content: attr(data-m);
+            font-size: .72rem;
+            font-weight: 500;
+            color: var(--mu)
+        }
+        
+        #foodRow>*[data-p] {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='14'%3E%3Ctext x='4' y='11' font-size='11' font-weight='700' fill='%233ddbb4' font-family='sans-serif'%3EP%3C/text%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px top 6px
+        }
+        
+        #modeRow {
+            display: flex!important;
+            gap: 4px!important;
+            padding: 5px;
+            border-radius: 18px;
+            background: var(--card2);
+            border: 1px solid var(--line);
+            margin-top: 14px
+        }
+        
+        #modeRow>* {
+            flex: 1;
+            display: flex!important;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 6px;
+            border: 0;
+            border-radius: 14px;
+            background: transparent;
+            color: var(--tx);
+            font-weight: 700;
+            cursor: pointer;
+            transition: .18s
+        }
+        
+        #modeRow>*::after {
+            content: attr(data-s);
+            font-size: .68rem;
+            font-weight: 500;
+            color: var(--mu)
+        }
+        
+        :is(#foodRow,
+        #modeRow)>:is(.active,
+        .on,
+        .selected,
+        .is-active,
+        [aria-pressed=true],
+        [aria-checked=true]) {
+            background: linear-gradient(135deg, #ff8a4c, #f2541b)!important;
+            border-color: transparent!important;
+            color: #fff!important;
+            box-shadow: 0 8px 22px rgba(242, 84, 27, .4)
+        }
+        
+        :is(#foodRow,
+        #modeRow)>:is(.active,
+        .on,
+        .selected,
+        .is-active,
+        [aria-pressed=true],
+        [aria-checked=true])::after {
+            color: rgba(255, 255, 255, .85)
+        }
+        
+        .sl {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 16px
+        }
+        
+        @media(max-width:700px) {
+            .sl {
+                grid-template-columns: 1fr
+            }
+        }
+        
+        .sl .h {
+            display: flex;
+            justify-content: space-between;
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--mu)
+        }
+        
+        .sl .val {
+            color: var(--tx);
+            font-weight: 700
+        }
+        
+        .ss3 .form-range {
+            height: 1.5rem
+        }
+        
+        .ss3 .form-range::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 99px;
+            background: var(--track)
+        }
+        
+        .ss3 .form-range::-moz-range-track {
+            height: 6px;
+            border-radius: 99px;
+            background: var(--track)
+        }
+        
+        .ss3 .form-range::-webkit-slider-thumb {
+            width: 22px;
+            height: 22px;
+            margin-top: -8px;
+            border: 3px solid #1c1410;
+            background: var(--fire);
+            box-shadow: 0 0 0 2px var(--fire)
+        }
+        
+        .ss3 .form-range::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border: 3px solid #1c1410;
+            background: var(--fire)
+        }
+        /* chart */
+        
+        .tabs {
+            display: flex;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 14px;
+            background: var(--card2);
+            border: 1px solid var(--line)
+        }
+        
+        .tabs button {
+            border: 0;
+            background: transparent;
+            color: var(--mu);
+            font-weight: 600;
+            font-size: .82rem;
+            padding: 7px 14px;
+            border-radius: 10px
+        }
+        
+        .tabs button.on {
+            background: linear-gradient(135deg, #ff8a4c, #f2541b);
+            color: #fff
+        }
+        
+        .chart-box {
+            display: none
+        }
+        
+        .chart-box.on {
+            display: block
+        }
+        
+        .chart-box .t {
+            font-family: 'Fraunces', serif;
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin: 10px 0
+        }
+        
+        .chart-box .t span:first-child {
+            display: none
+        }
+        
+        .chart-box .cv {
+            position: relative;
+            height: 200px
+        }
+        /* action bar */
+        
+        .dock {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+            z-index: 30;
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            width: min(560px, calc(100% - 24px));
+            border-radius: 24px;
+            background: rgba(28, 20, 16, .85);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .45)
+        }
+        
+        [data-bs-theme=light] .dock {
+            background: rgba(255, 255, 255, .9)
+        }
+        
+        .dock .btn {
+            border: 0;
+            border-radius: 16px;
+            font-weight: 700;
+            padding: 14px;
+            color: #fff
+        }
+        
+        #startBtn {
+            flex: 2;
+            background: linear-gradient(135deg, #ff8a4c, #f2541b)
+        }
+        
+        #stopBtn {
+            flex: 1.4;
+            background: linear-gradient(135deg, #ff7070, #d93d3d)
+        }
+        
+        #resetBtn {
+            width: 52px;
+            background: var(--card2);
+            color: var(--tx);
+            border: 1px solid var(--line)
+        }
+        
+        .dock .btn:disabled {
+            opacity: .45
+        }
+        
+        .ss3 .modal-content {
+            background: var(--bg);
+            color: var(--tx);
+            border: 1px solid var(--line);
+            border-radius: 26px
+        }
+        
+        #qrBox {
+            background: #fff;
+            padding: 10px;
+            border-radius: 16px;
+            line-height: 0;
+            display: inline-block
+        }
+        
+        .ss3 .toast {
+            background: var(--bg)!important;
+            border-radius: 14px
+        }
+        
+        .pulse {
+            animation: pl 1.6s ease-in-out infinite
+        }
+        
+        @keyframes pl {
+            50% {
+                transform: scale(1.14)
+            }
+        }
+        
+        @media(prefers-reduced-motion:reduce) {
+            .ss3 * {
+                animation: none!important;
+                transition: none!important
+            }
+        }
+    </style>
 </head>
-<body
-  data-state-url="{% url 'api_state' %}"
-  data-command-url="{% url 'api_command' %}"
-  data-qr-url="{% url 'qr_png' %}"
-  data-sw-url="{% url 'service_worker' %}">
 
-<div class="container py-3" style="max-width:1100px">
+<body class="ss3" data-state-url="{% url 'api_state' %}" data-command-url="{% url 'api_command' %}" data-qr-url="{% url 'qr_png' %}" data-sw-url="{% url 'service_worker' %}">
+    <div class="wrap">
 
-  <header class="d-flex align-items-center flex-wrap gap-3 mb-3">
-    <div class="brand-logo"><i class="bi bi-fire"></i></div>
-    <div class="brand">
-      <h1 class="h5 fw-bold mb-0">Sizzle <span>Sense</span></h1>
-      <div class="small text-secondary">Smart cooker simulator &middot; 0.50 kWh hard cap</div>
+        <header class="top">
+            <div class="logo"><i class="bi bi-fire"></i></div>
+            <div>
+                <h1>Sizzle <span>Sense</span></h1>
+                <div class="sub">Smart cooker &middot; 0.50 kWh energy cap</div>
+            </div>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <span class="pill"><i class="bi bi-circle-fill text-success" id="netDot" style="font-size:.5rem"></i><span id="netTxt">live</span></span>
+                <button class="sq" id="themeBtn" aria-label="Toggle theme"><i class="bi bi-sun"></i></button>
+                <button class="sq" data-bs-toggle="modal" data-bs-target="#qrModal" aria-label="Phone control"><i class="bi bi-qr-code"></i></button>
+            </div>
+        </header>
+
+        <div class="grid">
+            <section class="card2">
+                <div class="pills">
+                    <span class="badge state-badge st-IDLE" id="stateBadge">IDLE</span>
+                    <span class="badge" id="modeBadge">AUTO</span>
+                    <span class="food" id="foodNow"></span>
+                </div>
+                <div class="hero">
+                    <svg class="cooker" viewBox="0 0 300 230" aria-hidden="true">
+        <g transform="translate(0 6)"><path class="steam" d="M110 40c-10-12 10-22 0-34"/><path class="steam" d="M140 36c-10-12 10-22 0-34"/><path class="steam" d="M172 40c-10-12 10-22 0-34"/></g>
+        <ellipse class="glow" cx="150" cy="212" rx="105" ry="12" fill="#ff6b2c" opacity=".55"/>
+        <ellipse cx="150" cy="208" rx="95" ry="9" fill="#000" opacity=".3"/>
+        <rect x="38" y="118" width="26" height="50" rx="10" fill="#5a4437"/><rect x="236" y="118" width="26" height="50" rx="10" fill="#5a4437"/>
+        <rect x="55" y="104" width="190" height="98" rx="30" fill="#4a372d" stroke="#6d5446"/>
+        <path d="M62 112C62 70 100 56 150 56s88 14 88 56z" fill="#6b5043"/>
+        <path d="M82 100c4-18 22-28 40-30" stroke="#a38776" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <rect x="140" y="44" width="20" height="14" rx="4" fill="#3b2c24"/><circle cx="150" cy="42" r="10" fill="#ff7a3a"/>
+        <rect class="lamp" x="188" y="46" width="10" height="20" rx="5"/>
+        <rect x="95" y="124" width="110" height="56" rx="14" fill="#140e0b"/>
+        <circle cx="108" cy="137" r="4" fill="#ff7a3a"/>
+        <text id="ckState" x="150" y="140" text-anchor="middle" font-size="10" font-weight="700" letter-spacing="1.5" fill="#b0a198" font-family="Outfit,sans-serif">IDLE</text>
+        <text id="ckTemp" x="150" y="168" text-anchor="middle" font-size="26" font-weight="800" fill="#ffb02e" font-family="Fraunces,serif">24&deg;</text>
+      </svg>
+                    <div>
+                        <div class="rbox">
+                            <svg class="ring" viewBox="0 0 240 240"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb02e"/><stop offset="1" stop-color="#ff5a2a"/></linearGradient></defs>
+            <circle cx="120" cy="120" r="96" fill="none" stroke="var(--track)" stroke-width="16"/>
+            <circle id="ringArc" cx="120" cy="120" r="96" fill="none" stroke="url(#rg)" stroke-width="16" stroke-linecap="round" stroke-dasharray="603.2" stroke-dashoffset="603.2" transform="rotate(-90 120 120)" style="transition:stroke-dashoffset .6s"/>
+            <g id="ringTgt"><line x1="120" y1="6" x2="120" y2="30" stroke="var(--tx)" stroke-width="4" stroke-linecap="round"/></g></svg>
+                            <div class="in">
+                                <div class="lbl" style="letter-spacing:.1em">Temperature</div>
+                                <div class="big" style="font-size:2.6rem"><span id="temp">24.0</span><small style="font-size:1rem;color:var(--mu);font-family:Outfit,sans-serif">&deg;C</small></div>
+                                <div class="small text-secondary">Target <b style="color:var(--amb)" id="tgtTxt">--</b></div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <div class="lbl justify-content-center"><i class="bi bi-hourglass-split"></i>Time left</div>
+                            <div class="big" style="font-size:1.9rem;margin:6px 0 8px" id="timer">--:--</div>
+                            <div class="progress">
+                                <div class="progress-bar" id="progBar" style="width:0"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="phases" id="phases">
+                    <div class="ph" data-s="PREHEAT"><i class="bi bi-thermometer-half"></i>Preheat</div>
+                    <div class="ph" data-s="BOIL"><i class="bi bi-thermometer-high"></i>Boil</div>
+                    <div class="ph" data-s="SIMMER"><i class="bi bi-thermometer-low"></i>Simmer</div>
+                    <div class="ph" data-s="READY"><i class="bi bi-check-lg"></i>Ready</div>
+                </div>
+            </section>
+
+            <div class="stats">
+                <div class="card2 stat wide">
+                    <div class="lbl"><span class="ico i-a"><i class="bi bi-lightning-charge-fill"></i></span>Energy used</div>
+                    <div class="big"><span id="energy">0.000</span> <small>/ 0.50 kWh</small></div>
+                    <div class="progress">
+                        <div class="progress-bar cap" id="energyBar" style="width:0"></div>
+                    </div>
+                    <div class="hint"><span id="capPct">0</span>% of cap</div>
+                </div>
+                <div class="card2 stat">
+                    <div class="lbl"><span class="ico i-f"><i class="bi bi-reception-4"></i></span>Heater power</div>
+                    <div class="big"><span id="power">0</span> <small>%</small></div>
+                    <div class="progress">
+                        <div class="progress-bar" id="powerBar" style="width:0"></div>
+                    </div>
+                    <div class="hint">Output to heating element</div>
+                </div>
+                <button class="card2 stat" id="pressureBtn"><div class="lbl"><span class="ico i-m"><i class="bi bi-speedometer2"></i></span>Pressure</div>
+      <div class="big" id="pressureTxt">off</div><span class="sw"></span><div class="hint">Tap to toggle</div></button>
+            </div>
+        </div>
+
+        <section class="card2 mt-3">
+            <div class="lbl"><i class="bi bi-basket"></i>What are you cooking?</div>
+            <div id="foodRow"></div>
+        </section>
+
+        <section class="card2 mt-3">
+            <div class="lbl"><i class="bi bi-sliders"></i>Cooking mode</div>
+            <div id="modeRow"></div>
+            <div class="sl">
+                <div>
+                    <div class="h"><label for="powerSlider">Power</label><span class="val" id="powerVal">0%</span></div><input type="range" class="form-range" id="powerSlider" min="0" max="100" step="5" value="0"></div>
+                <div>
+                    <div class="h"><label for="tempSlider">Target</label><span class="val" id="tempVal">100&deg;</span></div><input type="range" class="form-range" id="tempSlider" min="40" max="130" step="1" value="100"></div>
+                <div>
+                    <div class="h"><label for="speedSlider">Sim speed</label><span class="val" id="speedVal">1x</span></div><input type="range" class="form-range" id="speedSlider" min="1" max="20" step="1" value="1"></div>
+            </div>
+            <div class="small text-secondary mt-3"><i class="bi bi-info-circle me-1"></i>Power and target are used in Manual / Semi. Auto sets them for the chosen food.</div>
+        </section>
+
+        <section class="card2 mt-3">
+            <div class="d-flex align-items-center">
+                <div class="lbl"><i class="bi bi-graph-up-arrow"></i>Live chart</div>
+                <div class="tabs ms-auto" id="tabs"><button class="on" data-c="tempChart">Temp</button><button data-c="energyChart">Energy</button><button data-c="powerChart">Power</button></div>
+            </div>
+            <div id="charts">
+                <div class="chart-box on">
+                    <div class="t"><span>Temperature</span><span id="cTemp">--</span></div>
+                    <div class="cv"><canvas id="tempChart"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <div class="t"><span>Energy</span><span id="cEnergy">--</span></div>
+                    <div class="cv"><canvas id="energyChart"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <div class="t"><span>Power</span><span id="cPower">--</span></div>
+                    <div class="cv"><canvas id="powerChart"></canvas></div>
+                </div>
+            </div>
+            <div id="simpleNote" class="small text-secondary d-none py-2">Lightweight mode: charts disabled to save battery.</div>
+        </section>
+
+        <div class="text-center small text-secondary mt-4">Sizzle Sense &middot; Django simulator &middot; <a class="text-decoration-none" style="color:var(--fire)" href="?simple=1">lightweight mode</a></div>
     </div>
-    <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-      <span class="badge rounded-pill text-bg-dark border" id="modeBadge">AUTO</span>
-      <span class="badge rounded-pill state-badge st-IDLE" id="stateBadge">IDLE</span>
-      <span class="badge rounded-pill text-bg-dark border">
-        <i class="bi bi-circle-fill text-success me-1" id="netDot" style="font-size:.5rem"></i><span id="netTxt">live</span>
-      </span>
-    </div>
-  </header>
 
-  <div class="row g-3">
-    <div class="col-lg-6">
-      <div class="ss-card p-3">
-        <div class="row g-2 mb-3">
-          <div class="col-6"><div class="readout">
-            <div class="k">Temperature</div>
-            <div class="v"><span id="temp">24.0</span><small>&deg;C</small></div>
-            <div class="progress mt-2"><div class="progress-bar" id="tempBar" style="width:0"></div></div>
-          </div></div>
-          <div class="col-6"><div class="readout">
-            <div class="k">Energy</div>
-            <div class="v"><span id="energy">0.000</span><small>kWh</small></div>
-            <div class="progress mt-2"><div class="progress-bar cap" id="energyBar" style="width:0"></div></div>
-          </div></div>
-          <div class="col-6"><div class="readout">
-            <div class="k">Time left</div>
-            <div class="v" id="timer">--:--</div>
-            <div class="progress mt-2"><div class="progress-bar" id="progBar" style="width:0"></div></div>
-          </div></div>
-          <div class="col-6"><div class="readout">
-            <div class="k">Power</div>
-            <div class="v"><span id="power">0</span><small>%</small></div>
-            <div class="progress mt-2"><div class="progress-bar" id="powerBar" style="width:0"></div></div>
-          </div></div>
-        </div>
-
-        <div class="card-title mb-2">Food</div>
-        <div class="d-flex flex-wrap gap-2 mb-3" id="foodRow"></div>
-
-        <div class="card-title mb-2">Mode</div>
-        <div class="d-flex gap-2 mb-3" id="modeRow"></div>
-
-        <div class="card-title mb-2">Controls</div>
-        <div class="d-flex align-items-center gap-3 mb-2">
-          <label class="small text-secondary" style="min-width:74px" for="powerSlider">Power</label>
-          <input type="range" class="form-range" id="powerSlider" min="0" max="100" step="5" value="0">
-          <span class="val" id="powerVal">0%</span>
-        </div>
-        <div class="d-flex align-items-center gap-3 mb-2">
-          <label class="small text-secondary" style="min-width:74px" for="tempSlider">Target</label>
-          <input type="range" class="form-range" id="tempSlider" min="40" max="130" step="1" value="100">
-          <span class="val" id="tempVal">100&deg;</span>
-        </div>
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <label class="small text-secondary" style="min-width:74px" for="speedSlider">Sim speed</label>
-          <input type="range" class="form-range" id="speedSlider" min="1" max="20" step="1" value="1">
-          <span class="val" id="speedVal">1x</span>
-        </div>
-
-        <button class="chip w-100 mb-3" id="pressureBtn" style="flex:none">
-          <i class="bi bi-speedometer2 me-1"></i>Pressure: <b id="pressureTxt">off</b>
-        </button>
-
-        <div class="row g-2">
-          <div class="col-4"><button class="btn btn-start w-100 py-2" id="startBtn"><i class="bi bi-play-fill"></i> Start</button></div>
-          <div class="col-4"><button class="btn btn-stop w-100 py-2" id="stopBtn"><i class="bi bi-stop-fill"></i> Stop</button></div>
-          <div class="col-4"><button class="btn btn-reset w-100 py-2" id="resetBtn"><i class="bi bi-arrow-counterclockwise"></i> Reset</button></div>
-        </div>
-      </div>
+    <div class="dock">
+        <button class="btn" id="startBtn"><i class="bi bi-play-fill"></i> Start cooking</button>
+        <button class="btn" id="stopBtn"><i class="bi bi-stop-fill"></i> Stop</button>
+        <button class="btn" id="resetBtn" aria-label="Reset"><i class="bi bi-arrow-counterclockwise"></i></button>
     </div>
 
-    <div class="col-lg-6">
-      <div class="ss-card p-3 mb-3">
-        <div class="card-title mb-2">Charts</div>
-        <div id="charts" class="d-flex flex-column gap-2">
-          <div class="chart-box"><div class="t"><span>Temperature &deg;C</span><span id="cTemp">--</span></div><div class="cv"><canvas id="tempChart"></canvas></div></div>
-          <div class="chart-box"><div class="t"><span>Energy kWh</span><span id="cEnergy">--</span></div><div class="cv"><canvas id="energyChart"></canvas></div></div>
-          <div class="chart-box"><div class="t"><span>Power %</span><span id="cPower">--</span></div><div class="cv"><canvas id="powerChart"></canvas></div></div>
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index:1090">
+        <div id="toast" class="toast align-items-center text-white border" role="status" aria-live="polite">
+            <div class="d-flex">
+                <div class="toast-body fw-semibold" id="toastBody"></div>
+            </div>
         </div>
-        <div id="simpleNote" class="small text-secondary d-none py-2">Lightweight mode: charts disabled to save battery.</div>
-      </div>
-
-      <div class="ss-card p-3">
-        <div class="card-title mb-2">Phone control</div>
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-          <div id="qrBox"><img id="qrImg" alt="QR code" width="110" height="110"></div>
-          <div class="small text-secondary" style="min-width:0">
-            <div class="fw-semibold text-light mb-1">Scan to open on your phone</div>
-            <div id="lanUrl" class="text-break">--</div>
-          </div>
-        </div>
-        <div class="small text-secondary mt-3">
-          <i class="bi bi-info-circle me-1"></i>All devices control the same cooker, because the simulation runs on the server.
-        </div>
-      </div>
     </div>
-  </div>
 
-  <div class="text-center small text-secondary mt-4">
-    Sizzle Sense &middot; Django simulator &middot; <a class="link-danger text-decoration-none" href="?simple=1">lightweight mode</a>
-  </div>
-</div>
-
-<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index:1090">
-  <div id="toast" class="toast align-items-center text-white border" role="status" aria-live="polite">
-    <div class="d-flex"><div class="toast-body fw-semibold" id="toastBody"></div></div>
-  </div>
-</div>
-
-<div class="modal fade" id="readyModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:340px">
-    <div class="modal-content text-center p-4">
-      <div class="display-3 mb-2 pulse"><i class="bi bi-egg-fried text-warning"></i></div>
-      <h3 class="h5 fw-bold">Your food is ready!</h3>
-      <p class="text-secondary small mb-3" id="readyReason">Cook complete.</p>
-      <button class="btn btn-danger w-100 fw-bold" data-bs-dismiss="modal">Nice, thanks</button>
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:340px">
+            <div class="modal-content text-center p-4">
+                <div class="fw-bold mb-3">Scan to open on your phone</div>
+                <div>
+                    <div id="qrBox"><img id="qrImg" alt="QR code" width="180" height="180"></div>
+                </div>
+                <div id="lanUrl" class="small text-secondary text-break mt-3">--</div>
+                <div class="small text-secondary mt-2">All devices control the same cooker.</div>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="{% static 'cooker/js/app.js' %}"></script>
+    <div class="modal fade" id="readyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:340px">
+            <div class="modal-content text-center p-4">
+                <div class="display-3 mb-2 pulse"><i class="bi bi-egg-fried text-warning"></i></div>
+                <h3 class="h5 fw-bold">Your food is ready!</h3>
+                <p class="text-secondary small mb-3" id="readyReason">Cook complete.</p>
+                <button class="btn text-white fw-bold w-100" style="background:linear-gradient(135deg,#ff8a4c,#f2541b)" data-bs-dismiss="modal">Nice, thanks</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="{% static 'cooker/js/app.js' %}"></script>
+    <script>
+        /* Visual layer only: reads what app.js already writes to the page; never changes data or commands. */
+        (() => {
+            const $ = s => document.querySelector(s),
+                num = s => parseFloat(($(s) || {}).textContent) || 0;
+            const F = {
+                beans: ['🫘', '45 min · 115°', 1],
+                maize: ['🌽', '30 min · 110°', 1],
+                cassava: ['🍠', '35 min · 112°', 1],
+                rice: ['🍚', '20 min · 100°'],
+                potato: ['🥔', '25 min · 105°']
+            };
+            const M = {
+                auto: 'Smart presets',
+                manual: 'Set it yourself',
+                semi: 'A bit of both'
+            };
+            const ACT = '.active,.on,.selected,.is-active,[aria-pressed="true"],[aria-checked="true"]';
+            const C = 2 * Math.PI * 96,
+                root = document.documentElement;
+
+            function deco() {
+                document.querySelectorAll('#foodRow>*').forEach(b => {
+                    const k = Object.keys(F).find(k => b.textContent.toLowerCase().includes(k));
+                    if (k && !b.dataset.e) {
+                        b.dataset.e = F[k][0];
+                        b.dataset.m = F[k][1];
+                        if (F[k][2]) b.dataset.p = 1
+                    }
+                });
+                document.querySelectorAll('#modeRow>*').forEach(b => {
+                    const k = Object.keys(M).find(k => b.textContent.toLowerCase().includes(k));
+                    if (k) b.dataset.s = M[k]
+                });
+                const a = $('#foodRow ' + ACT);
+                $('#foodNow').textContent = a ? ((a.dataset.e || '') + ' ' + a.textContent.trim()) : '';
+            }
+
+            function sync() {
+                const t = num('#temp'),
+                    mx = +$('#tempSlider').max || 130,
+                    tg = +$('#tempSlider').value,
+                    st = ($('#stateBadge').textContent || 'IDLE').trim().toUpperCase();
+                $('#ringArc').style.strokeDashoffset = C * (1 - Math.min(1, Math.max(0, t / mx)));
+                $('#ringTgt').setAttribute('transform', 'rotate(' + (tg / mx * 360) + ' 120 120)');
+                $('#tgtTxt').textContent = tg + '°';
+                $('#ckTemp').textContent = Math.round(t) + '°';
+                $('#ckState').textContent = st;
+                document.querySelectorAll('.ph').forEach(p => p.classList.toggle('on', p.dataset.s === st));
+                $('#capPct').textContent = Math.round(num('#energy') / 0.5 * 100);
+                const pr = /^on/i.test($('#pressureTxt').textContent.trim());
+                document.body.dataset.pr = pr ? 1 : 0;
+                document.body.dataset.heat = (num('#power') > 0 && st !== 'IDLE') ? 1 : 0;
+            }
+            setInterval(() => {
+                deco();
+                sync()
+            }, 400);
+            deco();
+            sync();
+            $('#tabs').addEventListener('click', e => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+                document.querySelectorAll('.chart-box').forEach(x => x.classList.toggle('on', !!x.querySelector('#' + b.dataset.c)));
+                window.dispatchEvent(new Event('resize'))
+            });
+            const th = localStorage.getItem('ss-theme');
+            if (th) root.dataset.bsTheme = th;
+            $('#themeBtn').onclick = () => {
+                const n = root.dataset.bsTheme === 'light' ? 'dark' : 'light';
+                root.dataset.bsTheme = n;
+                try {
+                    localStorage.setItem('ss-theme', n)
+                } catch (_) {}
+            };
+        })();
+    </script>
 </body>
+
 </html>
