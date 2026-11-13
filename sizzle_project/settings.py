@@ -34,6 +34,10 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "*")
 CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED")
+if os.environ.get("VERCEL_URL"):
+    CSRF_TRUSTED_ORIGINS.append("https://" + os.environ["VERCEL_URL"])
+if os.environ.get("VERCEL_PROJECT_PRODUCTION_URL"):
+    CSRF_TRUSTED_ORIGINS.append("https://" + os.environ["VERCEL_PROJECT_PRODUCTION_URL"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -77,7 +81,10 @@ def _database():
     if url.startswith(("postgres://", "postgresql://")):
         from urllib.parse import unquote, urlparse
 
+        from urllib.parse import parse_qs
+
         u = urlparse(url)
+        query = {k: v[0] for k, v in parse_qs(u.query).items()}
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": u.path.lstrip("/"),
@@ -85,8 +92,15 @@ def _database():
             "PASSWORD": unquote(u.password or ""),
             "HOST": u.hostname or "",
             "PORT": u.port or "",
-            "CONN_MAX_AGE": 60,
+            "CONN_MAX_AGE": 0 if os.environ.get("VERCEL") else 60,
+            "OPTIONS": {"sslmode": query.get("sslmode", "require")},
         }
+    if os.environ.get("VERCEL"):
+        # Vercel's project folder is read-only; SQLite can't live there.
+        raise RuntimeError(
+            "Set DATABASE_URL to a hosted Postgres (Neon / Supabase / Vercel Postgres). "
+            "SQLite does not work on Vercel."
+        )
     return {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
