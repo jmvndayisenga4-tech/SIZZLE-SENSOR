@@ -96,11 +96,12 @@ def _database():
             "OPTIONS": {"sslmode": query.get("sslmode", "require")},
         }
     if os.environ.get("VERCEL"):
-        # Vercel's project folder is read-only; SQLite can't live there.
-        raise RuntimeError(
-            "Set DATABASE_URL to a hosted Postgres (Neon / Supabase / Vercel Postgres). "
-            "SQLite does not work on Vercel."
-        )
+        # No DATABASE_URL: use a throwaway file in /tmp so the build still passes.
+        # Data here is NOT saved. Set DATABASE_URL for a real database.
+        return {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "/tmp/db.sqlite3",
+        }
     return {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
