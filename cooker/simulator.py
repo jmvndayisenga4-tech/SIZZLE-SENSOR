@@ -1,11 +1,11 @@
 """Smart-cooker simulator (pure Python, no Django imports).
 
-Ported 1:1 from the original Flask version. A single ``SmartCooker`` instance
-lives in process memory; a daemon thread advances it every TICK_SECONDS.
-The thread starts lazily the first time ``get_cooker()`` is called, so it works
-under ``runserver`` (with its reloader), gunicorn and ASGI alike.
+Each user cooker is one ``SmartCooker`` whose state is stored in the database
+(see ``cooker.models.Cooker``). There is no background thread: whenever a cooker
+is loaded, ``advance()`` replays the real time that has passed since its last
+update in small steps, so the physics are identical to the old always-running
+simulation and the cooker keeps "cooking" while its owner is away.
 """
-import sys
 import threading
 import time
 from collections import deque
@@ -14,6 +14,7 @@ ENERGY_CAP_KWH = 0.50          # hard cap - never exceeded
 TICK_SECONDS = 0.5             # simulator tick
 AMBIENT_TEMP = 24.0            # room temperature (deg C)
 HISTORY_LEN = 180              # ~90 s of samples at 0.5 s/tick
+MAX_CATCHUP_SECONDS = 4 * 3600  # never replay more than this after a long absence
 
 FOODS = {
     "beans":   {"label": "Beans",   "icon": "\U0001FAD8", "time": 45, "temp": 115, "pressure": True},
@@ -54,7 +55,6 @@ class SmartCooker:
         self.ready_reason = None
         self.history = deque(maxlen=HISTORY_LEN)
         self._last_tick = time.time()
-        self._last_logged_state = self.state
 
         self._record()
 
@@ -146,6 +146,64 @@ class SmartCooker:
                 self.power = 0
 
             self._record()
+
+    # -- persistence + catch-up -------------------------------------------
+    _FIELDS = (
+        "state", "mode", "current_food", "power", "pressure", "target_temp", "sim_speed",
+        "temperature", "energy", "elapsed", "cooking_seconds", "remaining",
+        "should_shutdown", "started_at", "ready_at", "ready_reason",
+    )
+
+    def to_dict(self):
+        with self.lock:
+            data = {k: getattr(self, k) for k in self._FIELDS}
+            data["last_tick"] = self._last_tick
+            data["history"] = list(self.history)
+            return data
+
+    @classmethod
+    def from_dict(cls, data):
+        """Rebuild a cooker from ``to_dict`` output. Missing/invalid keys fall back to defaults."""
+        c = cls()
+        if not isinstance(data, dict) or not data:
+            return c
+        for k in cls._FIELDS:
+            if k in data:
+                setattr(c, k, data[k])
+        if c.current_food not in FOODS:
+            c.current_food = "beans"
+        if c.mode not in MODES:
+            c.mode = "AUTO"
+        if c.state not in ("IDLE", "READY") + COOKING_STATES:
+            c.state = "IDLE"
+        c._last_tick = float(data.get("last_tick") or time.time())
+        c.history = deque(data.get("history") or [], maxlen=HISTORY_LEN)
+        if not c.history:
+            c._record()
+        return c
+
+    def advance(self, now=None):
+        """Replay the real time since the last update. Returns True if the state changed."""
+        with self.lock:
+            now = time.time() if now is None else now
+            gap = now - self._last_tick
+            if gap < 0.25:
+                return False
+            gap = min(gap, MAX_CATCHUP_SECONDS)
+            if self.state in ("IDLE", "READY") and self.temperature <= AMBIENT_TEMP + 1e-9:
+                self._last_tick = now      # nothing to simulate
+                return False
+            steps = 0
+            while gap > 1e-9 and steps < 30000:
+                step = TICK_SECONDS if self.state in COOKING_STATES else 2.0
+                dt = min(step, gap)
+                self.update(dt)
+                gap -= dt
+                steps += 1
+                if self.state in ("IDLE", "READY") and self.temperature <= AMBIENT_TEMP + 1e-9:
+                    break
+            self._last_tick = now
+            return True
 
     # -- commands ----------------------------------------------------------
     def start(self):
@@ -312,41 +370,3 @@ class SmartCooker:
                 "history": list(self.history),
                 "server_time": round(time.time(), 3),
             }
-
-
-# --------------------------------------------------------------------------
-# Process-wide instance + lazily started background thread
-# --------------------------------------------------------------------------
-_cooker = None
-_thread = None
-_boot_lock = threading.Lock()
-
-
-def _update_loop(cooker):
-    while True:
-        try:
-            cooker.update()
-            if cooker.state != cooker._last_logged_state:
-                cooker._last_logged_state = cooker.state
-                print(
-                    "[sizzle] state -> %-8s temp=%5.1fC energy=%.3f/%.2f kWh"
-                    % (cooker.state, cooker.temperature, cooker.energy, ENERGY_CAP_KWH),
-                    flush=True,
-                )
-        except Exception as exc:  # never let the thread die
-            print("[sizzle] update error: %s" % exc, file=sys.stderr, flush=True)
-        time.sleep(TICK_SECONDS)
-
-
-def get_cooker():
-    """Return the shared cooker, creating it and starting the thread on first use."""
-    global _cooker, _thread
-    if _cooker is None:
-        with _boot_lock:
-            if _cooker is None:
-                _cooker = SmartCooker()
-                _thread = threading.Thread(
-                    target=_update_loop, args=(_cooker,), name="sizzle-update", daemon=True
-                )
-                _thread.start()
-    return _cooker

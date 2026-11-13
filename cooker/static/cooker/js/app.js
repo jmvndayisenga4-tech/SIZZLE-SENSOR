@@ -6,6 +6,7 @@
   var COMMAND_URL = body.dataset.commandUrl;
   var QR_URL = body.dataset.qrUrl;
   var SW_URL = body.dataset.swUrl;
+  var CSRF = body.dataset.csrf || "";
 
   var SIMPLE = new URLSearchParams(location.search).has("simple");
   var POLL_MS = SIMPLE ? 1500 : 500;
@@ -71,9 +72,11 @@
     inflight = true; setBusy(true);
     fetch(COMMAND_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+      credentials: "same-origin",
       body: JSON.stringify({ command: cmd, value: value })
     }).then(function (r) {
+      if (r.status === 401) { location.reload(); }   // session expired -> login page
       return r.json().then(function (j) { return { ok: r.ok, j: j }; });
     }).then(function (res) {
       if (!res.ok || res.j.ok === false) throw new Error(res.j.error || "request failed");
@@ -206,8 +209,11 @@
 
   function poll() {
     if (document.hidden) return;   // save phone battery
-    fetch(STATE_URL, { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+    fetch(STATE_URL, { cache: "no-store", credentials: "same-origin" })
+      .then(function (r) {
+        if (r.status === 401) { location.reload(); throw new Error("login required"); }
+        return r.json();
+      })
       .then(function (j) { render(j); setOnline(true); })
       .catch(function () { setOnline(false); });
   }

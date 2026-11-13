@@ -1,0 +1,65 @@
+{% extends "cooker/base_auth.html" %}
+{% block title %}My cookers - Sizzle Sense{% endblock %}
+{% block content %}
+<div class="top">
+  <div class="logo"><i class="bi bi-fire"></i></div>
+  <div><h1>Sizzle <span>Sense</span></h1><div class="sub">Signed in as {{ user.get_username }}</div></div>
+  <form method="post" action="{% url 'logout' %}" style="margin-left:auto">{% csrf_token %}
+    <button class="btn ghost sm" type="submit"><i class="bi bi-box-arrow-right"></i> Sign out</button></form>
+</div>
+
+{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+
+{% if user.is_staff %}
+<section class="card" style="margin-bottom:14px">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="lbl" style="font-weight:700"><i class="bi bi-person-check"></i> Waiting for approval</div>
+    <span class="count">{{ pending|length }}</span>
+    <a class="sub" style="margin-left:auto" href="{% url 'admin:auth_user_changelist' %}"><i class="bi bi-gear"></i> Admin</a>
+  </div>
+  {% for p in pending %}
+  <div class="pend">
+    <div class="av">{{ p.get_username|slice:":1"|upper }}</div>
+    <div class="who"><b>{{ p.get_username }}</b><span class="sub">Signed up {{ p.date_joined|timesince }} ago</span></div>
+    <form method="post" action="{% url 'user_approve' p.pk %}">{% csrf_token %}<button class="btn sm" type="submit"><i class="bi bi-check-lg"></i> Approve</button></form>
+    <form method="post" action="{% url 'user_reject' p.pk %}" onsubmit="return confirm('Reject and delete this account?')">{% csrf_token %}<button class="btn danger sm" type="submit"><i class="bi bi-x-lg"></i></button></form>
+  </div>
+  {% empty %}
+  <div class="sub" style="margin-top:10px">No accounts are waiting right now.</div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if rows %}
+<div class="grid">
+  {% for r in rows %}
+  <div class="card ck">
+    <div class="row">
+      <div class="ic">{{ r.icon }}</div>
+      <div><h2>{{ r.cooker.name }}</h2><div class="sub">{{ r.food }}</div></div>
+      <span class="pill {% if r.ready %}rdy{% elif r.state != 'IDLE' %}on{% endif %}">{{ r.state }}</span>
+    </div>
+    <div class="bar"><i style="width:{{ r.pct }}%"></i></div>
+    <div class="meta"><span>{{ r.temp|floatformat:1 }}&deg;C</span><span>{{ r.pct|floatformat:0 }}% of energy cap</span></div>
+    <div class="acts">
+      <a class="btn sm" href="{% url 'cooker_page' r.cooker.pk %}"><i class="bi bi-play-fill"></i> Open</a>
+      <details><summary class="btn ghost sm"><i class="bi bi-pencil"></i> Rename</summary>
+        <form method="post" action="{% url 'cooker_rename' r.cooker.pk %}">{% csrf_token %}
+          <input type="text" name="name" value="{{ r.cooker.name }}" maxlength="60" required>
+          <button class="btn sm" type="submit">Save</button></form></details>
+      <form method="post" action="{% url 'cooker_delete' r.cooker.pk %}" onsubmit="return confirm('Delete this cooker and its progress?')">{% csrf_token %}
+        <button class="btn danger sm" type="submit"><i class="bi bi-trash"></i></button></form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty"><div style="font-size:2.4rem">🍲</div><p>You have no cookers yet. Add your first one below.</p></div>
+{% endif %}
+
+<form method="post" action="{% url 'cooker_create' %}" class="new">{% csrf_token %}
+  <input type="text" name="name" placeholder="Name your new cooker (e.g. Kitchen, Office)" maxlength="60" {% if not can_add %}disabled{% endif %}>
+  <button class="btn" type="submit" {% if not can_add %}disabled{% endif %}><i class="bi bi-plus-lg"></i> Add cooker</button>
+</form>
+{% if not can_add %}<div class="sub" style="margin-top:8px">You have reached the limit of {{ limit }} cookers. Delete one to add another.</div>{% endif %}
+{% endblock %}

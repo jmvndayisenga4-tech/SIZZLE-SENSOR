@@ -1,0 +1,15 @@
+{% extends "cooker/base_auth.html" %}
+{% block title %}Sign in - Sizzle Sense{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="top"><div class="logo"><i class="bi bi-fire"></i></div><div><h1>Sizzle <span>Sense</span></h1><div class="sub">Sign in to your cookers</div></div></div>
+  <form method="post" class="card">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="msg">{{ form.non_field_errors.0 }}</div>{% endif %}
+    <label for="{{ form.username.id_for_label }}">Username</label>{{ form.username }}
+    <label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn full" type="submit"><i class="bi bi-box-arrow-in-right"></i> Sign in</button>
+    {% if allow_signup %}<div class="alt">New here? <a href="{% url 'signup' %}">Create an account</a></div>{% endif %}
+  </form>
+</div>
+{% endblock %}

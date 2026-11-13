@@ -1,0 +1,13 @@
+{% extends "cooker/base_auth.html" %}
+{% block title %}Waiting for approval - Sizzle Sense{% endblock %}
+{% block content %}
+<div class="auth">
+  <div class="top"><div class="logo"><i class="bi bi-fire"></i></div><div><h1>Sizzle <span>Sense</span></h1><div class="sub">Account created</div></div></div>
+  <div class="card" style="text-align:center">
+    <div style="font-size:2.6rem">&#9203;</div>
+    <h2 style="margin:8px 0">Waiting for approval</h2>
+    <p class="sub" style="font-size:.92rem;line-height:1.5">Your account was created, but an administrator has to approve it before you can sign in. Please come back later and sign in with the username and password you just chose.</p>
+    <a class="btn full" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i> Back to sign in</a>
+  </div>
+</div>
+{% endblock %}

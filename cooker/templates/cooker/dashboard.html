@@ -796,17 +796,18 @@
     </style>
 </head>
 
-<body class="ss3" data-state-url="{% url 'api_state' %}" data-command-url="{% url 'api_command' %}" data-qr-url="{% url 'qr_png' %}" data-sw-url="{% url 'service_worker' %}">
+<body class="ss3" data-state-url="{% url 'api_state' cooker.pk %}" data-command-url="{% url 'api_command' cooker.pk %}" data-csrf="{{ csrf_token }}" data-qr-url="{% url 'qr_png' %}" data-sw-url="{% url 'service_worker' %}">
     <div class="wrap">
 
         <header class="top">
             <div class="logo"><i class="bi bi-fire"></i></div>
             <div>
                 <h1>Sizzle <span>Sense</span></h1>
-                <div class="sub">Smart cooker &middot; 0.50 kWh energy cap</div>
+                <div class="sub">{{ cooker.name }} &middot; 0.50 kWh cap</div>
             </div>
             <div class="ms-auto d-flex gap-2 align-items-center">
                 <span class="pill"><i class="bi bi-circle-fill text-success" id="netDot" style="font-size:.5rem"></i><span id="netTxt">live</span></span>
+                <a class="sq" href="{% url 'home' %}" aria-label="My cookers" title="My cookers" style="color:inherit"><i class="bi bi-grid"></i></a>
                 <button class="sq" id="themeBtn" aria-label="Toggle theme"><i class="bi bi-sun"></i></button>
                 <button class="sq" data-bs-toggle="modal" data-bs-target="#qrModal" aria-label="Phone control"><i class="bi bi-qr-code"></i></button>
             </div>
