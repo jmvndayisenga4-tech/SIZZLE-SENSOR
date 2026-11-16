@@ -85,7 +85,19 @@ volume) it is wiped on every deploy, deleting all accounts. Use PostgreSQL there
 (`pip install "psycopg[binary]"` and set `DATABASE_URL`). With PostgreSQL you may raise
 `--workers`; with SQLite keep `--workers 1`.
 
-> Vercel is not suitable (serverless functions + SQLite). Use a normal server.
+**Vercel + Neon (PostgreSQL):** works, but Vercel never runs `migrate` for you.
+1. In Neon copy the connection string (Dashboard -> Connect). If you do not know the
+   password, click *Reset password* first, then copy the new string.
+2. Set `DATABASE_URL` in Vercel (Settings -> Environment Variables) to that string,
+   with no extra quotes or spaces, for the Production environment, then **redeploy**.
+3. Create the tables once, from your own PC, pointing at the same database:
+   ```powershell
+   $env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+4. Error `password authentication failed` = the password in `DATABASE_URL` is wrong or
+   outdated. SQLite files cannot be used on Vercel (read-only disk).
 
 ## Layout
 

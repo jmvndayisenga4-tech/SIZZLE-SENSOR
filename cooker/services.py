@@ -11,7 +11,7 @@
 import threading
 from contextlib import contextmanager
 
-from django.db import transaction
+from django.db import connection, transaction
 
 from .models import Cooker
 from .simulator import SmartCooker
@@ -20,7 +20,14 @@ _locks = {}
 _guard = threading.Lock()
 
 
+_sqlite_lock = threading.Lock()
+
+
 def _lock_for(pk):
+    # SQLite allows one writer at a time, so on SQLite every cooker shares ONE lock
+    # (writes take milliseconds). Other databases lock per cooker (+ select_for_update).
+    if connection.vendor == "sqlite":
+        return _sqlite_lock
     with _guard:
         lock = _locks.get(pk)
         if lock is None:

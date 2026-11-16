@@ -5,6 +5,7 @@ import socket
 import time
 
 from django.conf import settings
+from django.db import OperationalError
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
@@ -82,6 +83,10 @@ def api_login_required(view):
         return view(request, *args, **kwargs)
 
     return wrapper
+
+
+def _busy():
+    return JsonResponse({"ok": False, "error": "server busy, retrying"}, status=503, headers={"Retry-After": "1"})
 
 
 def _not_found():
@@ -220,6 +225,8 @@ def api_state(request, pk):
             return JsonResponse(_payload(request, h))
     except Cooker.DoesNotExist:
         return _not_found()
+    except OperationalError:
+        return _busy()
 
 
 @require_POST
@@ -253,6 +260,8 @@ def api_command(request, pk):
             return JsonResponse(_payload(request, h, ok=bool(ok), message=msg), status=200 if ok else 409)
     except Cooker.DoesNotExist:
         return _not_found()
+    except OperationalError:
+        return _busy()
 
 
 @require_POST
@@ -266,6 +275,8 @@ def api_reset(request, pk):
             return JsonResponse(_payload(request, h, message="reset"))
     except Cooker.DoesNotExist:
         return _not_found()
+    except OperationalError:
+        return _busy()
 
 
 # --------------------------------------------------------------------------

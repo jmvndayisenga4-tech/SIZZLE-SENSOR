@@ -34,10 +34,6 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", "*")
 CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED")
-if os.environ.get("VERCEL_URL"):
-    CSRF_TRUSTED_ORIGINS.append("https://" + os.environ["VERCEL_URL"])
-if os.environ.get("VERCEL_PROJECT_PRODUCTION_URL"):
-    CSRF_TRUSTED_ORIGINS.append("https://" + os.environ["VERCEL_PROJECT_PRODUCTION_URL"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -79,33 +75,38 @@ TEMPLATES = [
 def _database():
     url = os.environ.get("DATABASE_URL", "")
     if url.startswith(("postgres://", "postgresql://")):
-        from urllib.parse import unquote, urlparse
-
-        from urllib.parse import parse_qs
+        from urllib.parse import parse_qsl, unquote, urlparse
 
         u = urlparse(url)
-        query = {k: v[0] for k, v in parse_qs(u.query).items()}
+        host = u.hostname or ""
+        query = dict(parse_qsl(u.query))
+        # keep the libpq options that cloud databases (Neon, Supabase...) put in the URL
+        options = {k: query[k] for k in ("sslmode", "channel_binding", "connect_timeout") if k in query}
+        options.setdefault("sslmode", "disable" if host in ("", "localhost", "127.0.0.1") else "require")
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": u.path.lstrip("/"),
             "USER": unquote(u.username or ""),
             "PASSWORD": unquote(u.password or ""),
-            "HOST": u.hostname or "",
+            "HOST": host,
             "PORT": u.port or "",
-            "CONN_MAX_AGE": 0 if os.environ.get("VERCEL") else 60,
-            "OPTIONS": {"sslmode": query.get("sslmode", "require")},
+            "CONN_MAX_AGE": 60,
+            "OPTIONS": options,
+            # pgbouncer "-pooler" hosts (Neon) do not support server-side cursors
+            "DISABLE_SERVER_SIDE_CURSORS": "-pooler" in host,
         }
-    if os.environ.get("VERCEL"):
-        # No DATABASE_URL: use a throwaway file in /tmp so the build still passes.
-        # Data here is NOT saved. Set DATABASE_URL for a real database.
-        return {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": "/tmp/db.sqlite3",
-        }
+    import django
+
+    options = {"timeout": 20}          # seconds a writer waits for the database file
+    if django.VERSION >= (5, 1):
+        # Take the write lock when a transaction STARTS (so it waits its turn instead of
+        # failing with "database is locked"), and let readers continue during writes.
+        options["transaction_mode"] = "IMMEDIATE"
+        options["init_command"] = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;"
     return {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
-        "OPTIONS": {"timeout": 20},
+        "OPTIONS": options,
     }
 
 

@@ -11,6 +11,7 @@
   var SIMPLE = new URLSearchParams(location.search).has("simple");
   var POLL_MS = SIMPLE ? 1500 : 500;
   var inflight = false;
+  var pollFails = 0;
   var lastState = null;
   var readyShown = false;
   var charts = {};
@@ -214,8 +215,8 @@
         if (r.status === 401) { location.reload(); throw new Error("login required"); }
         return r.json();
       })
-      .then(function (j) { render(j); setOnline(true); })
-      .catch(function () { setOnline(false); });
+      .then(function (j) { if (j && j.ok === false) throw new Error(j.error); render(j); setOnline(true); pollFails = 0; })
+      .catch(function () { if (++pollFails >= 3) setOnline(false); });
   }
 
   /* ---------- init ---------- */
