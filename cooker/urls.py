@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import views, views_admin
 from .forms import ApprovalAuthenticationForm
 
 urlpatterns = [
@@ -19,6 +19,16 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("users/<int:pk>/approve/", views.user_approve, name="user_approve"),
     path("users/<int:pk>/reject/", views.user_reject, name="user_reject"),
+    # admin dashboard (staff only)
+    path("manage/", views_admin.dashboard, name="admin_dashboard"),
+    path("manage/users/<int:pk>/approve/", views_admin.user_approve, name="admin_user_approve"),
+    path("manage/users/<int:pk>/disable/", views_admin.user_disable, name="admin_user_disable"),
+    path("manage/users/<int:pk>/delete/", views_admin.user_delete, name="admin_user_delete"),
+    path("manage/users/<int:pk>/staff/", views_admin.user_toggle_staff, name="admin_user_staff"),
+    path("manage/users/<int:pk>/password/", views_admin.user_set_password, name="admin_user_password"),
+    path("manage/cookers/<int:pk>/reset/", views_admin.cooker_reset, name="admin_cooker_reset"),
+    path("manage/cookers/<int:pk>/delete/", views_admin.cooker_delete, name="admin_cooker_delete"),
+
     path("c/new/", views.cooker_create, name="cooker_create"),
     path("c/<int:pk>/", views.cooker_page, name="cooker_page"),
     path("c/<int:pk>/rename/", views.cooker_rename, name="cooker_rename"),

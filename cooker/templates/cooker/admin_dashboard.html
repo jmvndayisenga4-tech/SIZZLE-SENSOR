@@ -1,0 +1,105 @@
+{% extends "cooker/base_auth.html" %}
+{% block title %}Admin - Sizzle Sense{% endblock %}
+{% block content %}
+<style>
+.stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:14px}
+.stat{padding:14px 16px;border-radius:20px}.stat b{display:block;font-family:'Fraunces',serif;font-size:1.7rem;line-height:1.1}
+.stat span{font-size:.74rem;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}.stat.warn b{color:var(--amb)}
+.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.tabs a{padding:9px 16px;border-radius:99px;font-weight:600;font-size:.88rem;background:var(--card2);border:1px solid var(--line);color:var(--mu)}
+.tabs a.on{background:linear-gradient(135deg,#ff8a4c,#f2541b);color:#fff;border-color:transparent}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters input,.filters select{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit}
+.filters input{flex:1;min-width:160px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);flex-wrap:wrap}.item:first-child{border-top:0}
+.item .who{flex:1;min-width:170px}.item .who b{word-break:break-all}
+.tag{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;margin-left:6px;background:var(--card2);border:1px solid var(--line);color:var(--mu)}
+.tag.ok{color:var(--mint);border-color:var(--mint)}.tag.wait{color:var(--amb);border-color:var(--amb)}.tag.off{color:var(--rose);border-color:var(--rose)}.tag.st{color:var(--fire);border-color:var(--fire)}
+.item .acts{margin-left:auto}.item .acts form{display:inline-flex;gap:6px}
+.pw input{padding:8px 10px;width:150px}.pager{display:flex;justify-content:center;gap:12px;align-items:center;margin-top:14px}
+</style>
+
+<div class="top">
+  <div class="logo"><i class="bi bi-shield-check"></i></div>
+  <div><h1>Admin <span>dashboard</span></h1><div class="sub">Signed in as {{ me.get_username }}</div></div>
+  <a class="btn ghost sm" style="margin-left:auto" href="{% url 'home' %}"><i class="bi bi-grid"></i> My cookers</a>
+</div>
+
+{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+
+<div class="stats">
+  <div class="card stat"><b>{{ stats.users }}</b><span>Users</span></div>
+  <div class="card stat"><b>{{ stats.active }}</b><span>Active</span></div>
+  <a class="card stat warn" href="?tab=users&status=pending"><b>{{ stats.pending }}</b><span>Waiting approval</span></a>
+  <div class="card stat"><b>{{ stats.staff }}</b><span>Admins</span></div>
+  <a class="card stat" href="?tab=cookers"><b>{{ stats.cookers }}</b><span>Cookers</span></a>
+</div>
+
+<div class="tabs">
+  <a href="?tab=users" class="{% if tab == 'users' %}on{% endif %}"><i class="bi bi-people"></i> Users</a>
+  <a href="?tab=cookers" class="{% if tab == 'cookers' %}on{% endif %}"><i class="bi bi-fire"></i> All cookers</a>
+  <a href="{% url 'admin:index' %}" style="margin-left:auto"><i class="bi bi-gear"></i> Django admin</a>
+</div>
+
+<form class="filters" method="get">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input type="text" name="q" value="{{ q }}" placeholder="{% if tab == 'users' %}Search username or email{% else %}Search cooker or owner{% endif %}">
+  {% if tab == 'users' %}
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All users</option>
+    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Waiting approval</option>
+    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+    <option value="disabled" {% if status == 'disabled' %}selected{% endif %}>Disabled</option>
+    <option value="staff" {% if status == 'staff' %}selected{% endif %}>Admins</option>
+  </select>
+  {% endif %}
+  <button class="btn ghost sm" type="submit"><i class="bi bi-search"></i> Search</button>
+</form>
+
+<section class="card">
+{% if tab == 'users' %}
+  {% for u in page %}
+  <div class="item">
+    <div class="who">
+      <b>{{ u.get_username }}</b>
+      {% if u.waiting %}<span class="tag wait">Waiting</span>{% elif u.is_active %}<span class="tag ok">Active</span>{% else %}<span class="tag off">Disabled</span>{% endif %}
+      {% if u.is_superuser %}<span class="tag st">Superuser</span>{% elif u.is_staff %}<span class="tag st">Admin</span>{% endif %}
+      <div class="sub">{% if u.email %}{{ u.email }} · {% endif %}joined {{ u.date_joined|timesince }} ago · {{ u.n_cookers }} cooker{{ u.n_cookers|pluralize }}</div>
+    </div>
+    {% if u.manageable %}
+    <div class="acts">
+      {% if not u.is_active %}
+      <form method="post" action="{% url 'admin_user_approve' u.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn sm" type="submit"><i class="bi bi-check-lg"></i> {% if u.waiting %}Approve{% else %}Enable{% endif %}</button></form>
+      {% else %}
+      <form method="post" action="{% url 'admin_user_disable' u.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn ghost sm" type="submit"><i class="bi bi-slash-circle"></i> Disable</button></form>
+      {% endif %}
+      <details style="display:inline-block"><summary class="btn ghost sm"><i class="bi bi-key"></i></summary>
+        <form class="pw" method="post" action="{% url 'admin_user_password' u.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><input type="password" name="password" placeholder="New password" autocomplete="new-password" required><button class="btn sm" type="submit">Set</button></form></details>
+      {% if me.is_superuser and not u.is_superuser %}
+      <form method="post" action="{% url 'admin_user_staff' u.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn ghost sm" type="submit" title="{% if u.is_staff %}Remove admin rights{% else %}Make admin{% endif %}"><i class="bi bi-shield{% if u.is_staff %}-x{% else %}-plus{% endif %}"></i></button></form>
+      {% endif %}
+      <form method="post" action="{% url 'admin_user_delete' u.pk %}" onsubmit="return confirm('Delete {{ u.get_username|escapejs }} and all their cookers?')">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn danger sm" type="submit"><i class="bi bi-trash"></i></button></form>
+    </div>
+    {% else %}<div class="acts sub">{% if u.pk == me.pk %}You{% else %}Protected{% endif %}</div>{% endif %}
+  </div>
+  {% empty %}<div class="empty">No users match.</div>{% endfor %}
+{% else %}
+  {% for c in page %}
+  <div class="item">
+    <div class="who"><b>{{ c.name }}</b><span class="tag">{{ c.owner.get_username }}</span>
+      <div class="sub">created {{ c.created_at|date:"d M Y" }} · last active {{ c.updated_at|timesince }} ago</div></div>
+    <div class="acts">
+      <form method="post" action="{% url 'admin_cooker_reset' c.pk %}" onsubmit="return confirm('Reset this cooker to its starting state?')">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn ghost sm" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Reset</button></form>
+      <form method="post" action="{% url 'admin_cooker_delete' c.pk %}" onsubmit="return confirm('Delete this cooker?')">{% csrf_token %}<input type="hidden" name="next" value="{{ next }}"><button class="btn danger sm" type="submit"><i class="bi bi-trash"></i></button></form>
+    </div>
+  </div>
+  {% empty %}<div class="empty">No cookers match.</div>{% endfor %}
+{% endif %}
+</section>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="pager">
+  {% if page.has_previous %}<a class="btn ghost sm" href="?tab={{ tab }}&q={{ q|urlencode }}&status={{ status }}&page={{ page.previous_page_number }}">&larr; Prev</a>{% endif %}
+  <span class="sub">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn ghost sm" href="?tab={{ tab }}&q={{ q|urlencode }}&status={{ status }}&page={{ page.next_page_number }}">Next &rarr;</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
