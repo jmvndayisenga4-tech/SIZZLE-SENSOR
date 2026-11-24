@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
+from . import tariff
 from .models import Cooker
 from .services import new_state
 
@@ -80,6 +81,7 @@ def dashboard(request):
         "cookers": Cooker.objects.count(),
     }
 
+    stats["energy"] = tariff.all_month()
     ctx = {"tab": tab, "q": q, "status": status, "stats": stats,
            "limit": settings.MAX_COOKERS_PER_USER, "me": request.user}
 

@@ -36,6 +36,32 @@ Use **Disable selected accounts** to lock someone out; they are signed out immed
 Their first cooker is already created, so it is ready as soon as they are approved.
 Accounts you create yourself in `/admin/` or with `createsuperuser` are active straight away.
 
+## Electricity cost (REG tariff)
+
+Every finished cook is priced at the REG (Rwanda Energy Group) residential tariff, effective
+1 October 2025 (RURA notice, VAT exclusive):
+
+| Monthly use of the account | RWF per kWh |
+|---|---|
+| first 20 kWh | 89 |
+| 21 - 50 kWh | 310 |
+| above 50 kWh | 369 |
+
+* Blocks restart every calendar month (Africa/Kigali) and are shared by all cookers of an account,
+  like a household meter. A cook that crosses a boundary is split across both rates.
+* The cooker page shows the cost so far while cooking, the rate and block you are in, the month
+  total, a **Recent cooks** list, and the cost of the cook in the "ready" pop-up.
+* *My cookers* shows the month's kWh and cost for the account; the admin dashboard shows the
+  totals for all accounts.
+* Cooks are stored in the `CookSession` table (run `python manage.py migrate` once after upgrading;
+  on Vercel run it against your database from your computer with `DATABASE_URL` set).
+* Settings (environment variables): `REG_TARIFF_BLOCKS` (default `20:89,50:310,*:369`),
+  `REG_VAT_PERCENT` (default `0`), `REG_TARIFF_LABEL`, `BILLING_TIME_ZONE`.
+* The prototype is solar powered, so this is the value of the energy at the grid price (what the
+  same cook would cost on REG power), not a bill.
+
+Run the cost checks with `python test_cost.py`.
+
 ## Run locally (Windows PowerShell)
 
 ```powershell

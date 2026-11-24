@@ -17,6 +17,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
+from . import tariff
 from .models import Cooker
 from .services import new_state, open_cooker
 
@@ -65,7 +66,9 @@ def _links(request, cooker):
 
 
 def _payload(request, handle, **extra):
+    handle.settle()                                   # book a cook that just ended before pricing
     data = handle.sim.snapshot()
+    data["cost"] = tariff.live_summary(handle.obj, handle.sim)
     data["links"] = _links(request, handle.obj)
     data["cooker"] = {"id": handle.obj.pk, "name": handle.obj.name}
     data["ok"] = True
@@ -137,6 +140,7 @@ def home(request):
     pending = _pending_users() if request.user.is_staff else []
     return render(request, "cooker/cooker_list.html", {
         "rows": rows, "limit": limit, "can_add": len(rows) < limit, "pending": pending,
+        "month": tariff.owner_month(request.user),
     })
 
 

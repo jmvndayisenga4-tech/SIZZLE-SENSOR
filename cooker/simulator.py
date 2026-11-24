@@ -53,6 +53,8 @@ class SmartCooker:
         self.started_at = None
         self.ready_at = None
         self.ready_reason = None
+        self.cook_open = False         # True from start() until that cook ends (billing)
+        self.finished_cooks = []       # ended cooks waiting to be written to the database
         self.history = deque(maxlen=HISTORY_LEN)
         self._last_tick = time.time()
 
@@ -69,6 +71,19 @@ class SmartCooker:
             }
         )
 
+    def _end_cook(self, reason):
+        """Close the running cook and queue it for billing (services.Handle.settle writes it)."""
+        if not self.cook_open:
+            return
+        self.cook_open = False
+        if self.energy > 1e-6:
+            self.finished_cooks.append({
+                "food": self.current_food, "mode": self.mode, "started_at": self.started_at,
+                "ended_at": time.time(), "kwh": round(self.energy, 4),
+                "seconds": round(self.elapsed, 1), "reason": reason,
+            })
+            del self.finished_cooks[:-50]
+
     def _finish(self, reason):
         if self.state == "READY":
             return
@@ -76,8 +91,10 @@ class SmartCooker:
         self.power = 0
         self.ready_at = time.time()
         self.ready_reason = reason
+        self._end_cook(reason)
 
     def _reset_locked(self):
+        self._end_cook("reset")
         self.state = "IDLE"
         self.power = 0
         self.energy = 0.0
@@ -152,6 +169,7 @@ class SmartCooker:
         "state", "mode", "current_food", "power", "pressure", "target_temp", "sim_speed",
         "temperature", "energy", "elapsed", "cooking_seconds", "remaining",
         "should_shutdown", "started_at", "ready_at", "ready_reason",
+        "cook_open", "finished_cooks",
     )
 
     def to_dict(self):
@@ -228,10 +246,13 @@ class SmartCooker:
                 self.power = 60
 
             self.state = "PREHEAT"
+            self.cook_open = True
             return True, "started"
 
     def stop(self):
         with self.lock:
+            if self.state in COOKING_STATES:
+                self._end_cook("stopped")
             self.state = "IDLE"
             self.power = 0
             self.should_shutdown = False

@@ -142,9 +142,58 @@
     }
   }
 
+  /* ---------- cost (REG tariff) ---------- */
+  function money(v, d) {
+    return Number(v).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  function renderCost(c) {
+    if (!c || !$("costNow")) return;
+    $("costNow").textContent = money(c.this_cook, 2);
+    $("costCur").textContent = c.currency + (c.live ? " so far this cook" : " last cook");
+    $("costRate").textContent = money(c.rate, c.rate % 1 ? 2 : 0);
+    $("costRateUnit").textContent = c.currency + "/kWh";
+    $("monthName").textContent = c.month_name;
+    $("monthKwh").textContent = money(c.month_kwh, 2);
+    $("monthCost").textContent = money(c.month_cost, 0);
+    var hint = "Block " + c.block + " (" + c.block_label + ")";
+    if (c.block_left !== null) hint += " · " + money(c.block_left, 1) + " kWh left at this rate";
+    hint += " · " + (c.vat_percent ? "incl. " + c.vat_percent + "% VAT" : "excl. VAT") + " · " + c.tariff_label;
+    $("costHint").textContent = hint;
+
+    var list = $("recentList");
+    list.textContent = "";
+    if (!c.recent.length) {
+      var none = document.createElement("div");
+      none.className = "recent-row";
+      none.textContent = "No finished cooks yet.";
+      list.appendChild(none);
+    }
+    c.recent.forEach(function (r) {
+      var row = document.createElement("div");
+      row.className = "recent-row";
+      var left = document.createElement("span");
+      var when = new Date(r.ended_at * 1000);
+      left.textContent = (r.food ? r.food.charAt(0).toUpperCase() + r.food.slice(1) : "Cook") + " ";
+      var sm = document.createElement("small");
+      sm.textContent = when.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) +
+        (r.reason ? " · " + r.reason : "");
+      left.appendChild(sm);
+      var kwh = document.createElement("span");
+      kwh.textContent = money(r.kwh, 3) + " kWh";
+      var cost = document.createElement("b");
+      cost.textContent = money(r.cost, 2) + " " + c.currency;
+      row.appendChild(left); row.appendChild(kwh); row.appendChild(cost);
+      list.appendChild(row);
+    });
+    var rc = $("readyCost");
+    if (rc) rc.textContent = "This cook: " + money(c.this_kwh, 3) + " kWh = " + money(c.this_cook, 2) + " " + c.currency;
+  }
+
   /* ---------- render ---------- */
   function render(st) {
     lastState = st;
+    renderCost(st.cost);
 
     $("temp").textContent = st.temperature.toFixed(1);
     $("energy").textContent = st.energy.toFixed(3);

@@ -403,6 +403,56 @@
             font-family: 'Outfit', sans-serif
         }
         
+        .cost-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 28px;
+            font-size: .9rem
+        }
+        
+        .cost-row .k {
+            display: block;
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: var(--mu)
+        }
+        
+        .cost-row b {
+            font-size: 1.15rem
+        }
+        
+        .cost-row .u {
+            color: var(--mu);
+            font-size: .8rem
+        }
+        
+        .recent {
+            margin-top: 10px;
+            font-size: .85rem
+        }
+        
+        .recent summary {
+            cursor: pointer;
+            color: var(--mu)
+        }
+        
+        .recent-row {
+            display: flex;
+            gap: 10px;
+            padding: 7px 0;
+            border-top: 1px solid var(--line)
+        }
+        
+        .recent-row span:first-child {
+            flex: 1;
+            min-width: 0
+        }
+        
+        .recent-row small {
+            color: var(--mu)
+        }
+        
         .stat .hint {
             font-size: .78rem;
             color: var(--mu);
@@ -875,6 +925,16 @@
                     </div>
                     <div class="hint"><span id="capPct">0</span>% of cap</div>
                 </div>
+                <div class="card2 stat wide" id="costCard">
+                    <div class="lbl"><span class="ico i-a"><i class="bi bi-cash-coin"></i></span>Cost at REG tariff</div>
+                    <div class="big"><span id="costNow">0.00</span> <small id="costCur">RWF this cook</small></div>
+                    <div class="cost-row">
+                        <div><span class="k">Rate now</span><b id="costRate">--</b> <span class="u" id="costRateUnit">RWF/kWh</span></div>
+                        <div><span class="k" id="monthName">This month</span><b id="monthKwh">0.00</b> <span class="u">kWh</span> &middot; <b id="monthCost">0</b> <span class="u">RWF</span></div>
+                    </div>
+                    <div class="hint" id="costHint">Loading tariff&hellip;</div>
+                    <details class="recent"><summary>Recent cooks</summary><div id="recentList" class="recent-list"></div></details>
+                </div>
                 <div class="card2 stat">
                     <div class="lbl"><span class="ico i-f"><i class="bi bi-reception-4"></i></span>Heater power</div>
                     <div class="big"><span id="power">0</span> <small>%</small></div>
@@ -966,7 +1026,8 @@
             <div class="modal-content text-center p-4">
                 <div class="display-3 mb-2 pulse"><i class="bi bi-egg-fried text-warning"></i></div>
                 <h3 class="h5 fw-bold">Your food is ready!</h3>
-                <p class="text-secondary small mb-3" id="readyReason">Cook complete.</p>
+                <p class="text-secondary small mb-2" id="readyReason">Cook complete.</p>
+                <p class="fw-bold mb-3" id="readyCost"></p>
                 <button class="btn text-white fw-bold w-100" style="background:linear-gradient(135deg,#ff8a4c,#f2541b)" data-bs-dismiss="modal">Nice, thanks</button>
             </div>
         </div>

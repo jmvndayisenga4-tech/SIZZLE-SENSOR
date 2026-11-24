@@ -12,6 +12,11 @@ production (Render / Railway / Fly / a VPS):
     DJANGO_REQUIRE_APPROVAL   "1" (default) = new sign-ups stay inactive until an admin approves them
     DJANGO_ALLOW_SIGNUP       "1" (default) lets anyone register; "0" = admin-created accounts only
     MAX_COOKERS_PER_USER      how many cookers one account may own (default 5)
+    REG_TARIFF_BLOCKS         monthly kWh blocks "upper_kwh:RWF_per_kWh,...", "*" = no limit
+                              (default "20:89,50:310,*:369" = REG residential, RURA notice 1 Oct 2025)
+    REG_VAT_PERCENT           VAT added on top of the tariff (default 0 = tariff shown VAT-exclusive)
+    REG_TARIFF_LABEL          text shown next to the cost on the dashboard
+    BILLING_TIME_ZONE         month boundaries for the tariff blocks (default Africa/Kigali)
 """
 import os
 from pathlib import Path
@@ -129,6 +134,30 @@ MAX_COOKERS_PER_USER = int(os.environ.get("MAX_COOKERS_PER_USER", "5"))
 # Cookies only travel over HTTPS in production.
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+
+# --- Electricity cost: REG (Rwanda Energy Group) residential tariff, VAT exclusive ---------------
+# Blocks restart every calendar month for each account: the first 20 kWh cost 89 RWF/kWh, the
+# next 30 kWh (to 50) 310 RWF/kWh and everything above 369 RWF/kWh (RURA notice, 1 Oct 2025).
+def _tariff_blocks():
+    raw = os.environ.get("REG_TARIFF_BLOCKS", "20:89,50:310,*:369")
+    blocks, last = [], 0.0
+    for part in raw.split(","):
+        limit, _, rate = part.strip().partition(":")
+        upto = None if limit.strip() in ("*", "") else float(limit)
+        if upto is not None and upto <= last:
+            raise RuntimeError("REG_TARIFF_BLOCKS limits must increase: %r" % raw)
+        blocks.append((upto, float(rate)))
+        last = upto if upto is not None else last
+    if blocks[-1][0] is not None:
+        raise RuntimeError("REG_TARIFF_BLOCKS must end with a '*:rate' block")
+    return blocks
+
+
+REG_TARIFF_BLOCKS = _tariff_blocks()
+REG_VAT_PERCENT = float(os.environ.get("REG_VAT_PERCENT", "0"))
+REG_TARIFF_LABEL = os.environ.get("REG_TARIFF_LABEL", "REG residential tariff (Oct 2025)")
+BILLING_TIME_ZONE = os.environ.get("BILLING_TIME_ZONE", "Africa/Kigali")
+CURRENCY = "RWF"
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

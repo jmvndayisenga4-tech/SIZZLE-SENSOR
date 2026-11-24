@@ -31,6 +31,8 @@
   <a class="card stat warn" href="?tab=users&status=pending"><b>{{ stats.pending }}</b><span>Waiting approval</span></a>
   <div class="card stat"><b>{{ stats.staff }}</b><span>Admins</span></div>
   <a class="card stat" href="?tab=cookers"><b>{{ stats.cookers }}</b><span>Cookers</span></a>
+  <div class="card stat"><b>{{ stats.energy.kwh|floatformat:2 }}</b><span>kWh this month · {{ stats.energy.cooks }} cook{{ stats.energy.cooks|pluralize }}</span></div>
+  <div class="card stat"><b>{{ stats.energy.cost|floatformat:0 }}</b><span>RWF at REG tariff</span></div>
 </div>
 
 <div class="tabs">

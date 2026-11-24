@@ -6,7 +6,7 @@
   2. opens a transaction with ``select_for_update`` (the same guarantee across
      several worker processes on PostgreSQL),
   3. replays the elapsed real time, lets the caller read/command the simulator,
-  4. saves the new state if anything changed.
+  4. books every cook that ended (cost at the REG tariff) and saves the new state if anything changed.
 """
 import threading
 from contextlib import contextmanager
@@ -41,6 +41,18 @@ class Handle:
         self.sim = sim
         self.dirty = dirty      # set True after changing the simulator
 
+    def settle(self):
+        """Write cooks that have ended since the last call to the database, priced at the REG tariff."""
+        cooks = self.sim.finished_cooks
+        if not cooks:
+            return
+        from .tariff import record_cook
+
+        for d in list(cooks):
+            record_cook(self.obj, d)
+        self.sim.finished_cooks = []
+        self.dirty = True
+
 
 @contextmanager
 def open_cooker(user, pk):
@@ -50,7 +62,9 @@ def open_cooker(user, pk):
             obj = Cooker.objects.select_for_update().get(pk=pk, owner=user)
             sim = SmartCooker.from_dict(obj.state_data)
             handle = Handle(obj, sim, sim.advance())
+            handle.settle()
             yield handle
+            handle.settle()
             if handle.dirty:
                 obj.state_data = sim.to_dict()
                 obj.save(update_fields=["state_data", "updated_at"])
