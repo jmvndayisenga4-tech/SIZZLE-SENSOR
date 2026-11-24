@@ -195,21 +195,29 @@
 
   /* ---------- amount (kg) + plan ---------- */
   function renderAmount(st) {
-    var q = $("qtySlider");
+    var q = $("qtyInput");
     if (!q || st.quantity_kg === undefined) return;
-    var f = st.foods && st.foods[st.food];
-    if (f) { q.min = f.min_kg; q.max = f.max_kg; q.step = st.kg_step; }
-    if (document.activeElement !== q) q.value = st.quantity_kg;
-    $("qtyVal").textContent = Number(q.value).toFixed(2) + " kg";
-    q.disabled = ["PREHEAT", "BOIL", "SIMMER"].indexOf(st.state) >= 0;
-    var c = st.cost;
+    var cooking = ["PREHEAT", "BOIL", "SIMMER"].indexOf(st.state) >= 0;
+    if (document.activeElement !== q) q.value = Number(st.quantity_kg).toFixed(2);
+    q.disabled = cooking;
+    $("qtyBtn").disabled = cooking;
+    var c = st.cost, f = st.foods && st.foods[st.food];
     if (!c) return;
-    var line = (f ? f.label + ", " : "") + st.quantity_kg.toFixed(2) + " kg: about " + money(st.energy_budget, 2) +
-      " kWh, " + money(c.plan_cost, 0) + " " + c.currency;
-    if (c.plan_cost_per_kg) line += " (" + money(c.plan_cost_per_kg, 0) + " " + c.currency + "/kg)";
-    line += ", " + Math.round(st.plan_minutes) + " min, add " + money(st.water_litres, 2) + " L water.";
-    if (f) line += " Largest batch: " + f.max_kg.toFixed(2) + " kg (0.50 kWh cap).";
-    $("planLine").textContent = line;
+    var line = (f ? f.label + ", " : "") + Number(st.quantity_kg).toFixed(2) + " kg: ";
+    var line2 = Math.round(st.plan_minutes) + " min, add " + money(st.water_litres, 2) + " L water.";
+    var pl = $("planLine");
+    if (st.over_cap) {
+      line += "needs about " + money(st.energy_budget, 2) + " kWh, more than the " + money(st.energy_cap, 2) +
+        " kWh cap. The cooker would stop at the cap (about " + Math.round(st.cap_fraction * 100) +
+        "% cooked, up to " + money(c.plan_cost, 0) + " " + c.currency + "). Cook it in " + st.batches_needed +
+        " batches of up to " + f.max_kg.toFixed(2) + " kg instead.";
+    } else {
+      line += "about " + money(st.energy_budget, 2) + " kWh, " + money(c.plan_cost, 0) + " " + c.currency;
+      if (c.plan_cost_per_kg) line += " (" + money(c.plan_cost_per_kg, 0) + " " + c.currency + "/kg)";
+      line += ", " + line2;
+    }
+    pl.textContent = line;
+    pl.classList.toggle("warn", !!st.over_cap);
   }
 
   /* ---------- render ---------- */
@@ -310,9 +318,14 @@
       s.addEventListener("change", function () { send(a[3], Number(s.value)); s.blur(); });
     });
 
-    var qs = $("qtySlider");
-    qs.addEventListener("input", function () { $("qtyVal").textContent = Number(qs.value).toFixed(2) + " kg"; });
-    qs.addEventListener("change", function () { send("quantity", Number(qs.value)); qs.blur(); });
+    function setAmount() {
+      var q = $("qtyInput"), v = parseFloat(String(q.value).replace(",", "."));
+      if (!isFinite(v) || v < 0.05 || v > 100) { toast("⚠ Enter an amount from 0.05 to 100 kg", true); return; }
+      send("quantity", v);
+    }
+    $("qtyBtn").addEventListener("click", setAmount);
+    $("qtyInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setAmount(); } });
+    $("qtyInput").addEventListener("change", setAmount);
 
     if (SIMPLE) {
       $("charts").classList.add("d-none");

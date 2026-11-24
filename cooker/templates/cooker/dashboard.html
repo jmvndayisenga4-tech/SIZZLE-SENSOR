@@ -453,6 +453,52 @@
             color: var(--mu)
         }
         
+        .amount-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px
+        }
+        
+        .amount-row label {
+            font-weight: 600;
+            font-size: .9rem
+        }
+        
+        .amount-field {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+        
+        .amount-field input {
+            width: 110px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--card2);
+            color: var(--tx);
+            font: inherit;
+            font-weight: 700;
+            text-align: right
+        }
+        
+        .amount-field input:focus {
+            outline: none;
+            border-color: var(--fire);
+            box-shadow: 0 0 0 3px rgba(255, 107, 44, .25)
+        }
+        
+        .amount-field .unit {
+            color: var(--mu)
+        }
+        
+        #planLine.warn {
+            color: var(--amb)!important
+        }
+        
         .stat .hint {
             font-size: .78rem;
             color: var(--mu);
@@ -951,10 +997,12 @@
         <section class="card2 mt-3">
             <div class="lbl"><i class="bi bi-basket"></i>What are you cooking?</div>
             <div id="foodRow"></div>
-            <div class="sl" style="margin-top:16px">
-                <div>
-                    <div class="h"><label for="qtySlider">Amount of food</label><span class="val" id="qtyVal">0.50 kg</span></div>
-                    <input type="range" class="form-range" id="qtySlider" min="0.1" max="1" step="0.05" value="0.5" aria-describedby="planLine">
+            <div class="amount-row">
+                <label for="qtyInput">Amount of food</label>
+                <div class="amount-field">
+                    <input type="number" id="qtyInput" inputmode="decimal" min="0.05" max="100" step="0.01" value="0.50" aria-describedby="planLine">
+                    <span class="unit">kg</span>
+                    <button type="button" class="btn btn-sm text-white fw-bold" id="qtyBtn" style="background:linear-gradient(135deg,#ff8a4c,#f2541b)">Set</button>
                 </div>
             </div>
             <div class="small text-secondary mt-2" id="planLine" aria-live="polite">Choose how much you are cooking.</div>

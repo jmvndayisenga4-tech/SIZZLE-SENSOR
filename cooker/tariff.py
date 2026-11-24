@@ -144,7 +144,9 @@ def live_summary(cooker, sim):
         this_cost = float(last.cost) if last else 0.0
         parts = last.breakdown if last else []
     # plan for the chosen amount: what a full cook of it will use and cost, before pressing start
-    plan_kwh = float(sim.energy_budget)
+    from .simulator import ENERGY_CAP_KWH
+    need_kwh = float(sim.energy_budget)                # what the batch needs
+    plan_kwh = min(need_kwh, ENERGY_CAP_KWH)           # what the cooker can actually use (cap stops it)
     plan_cost, _ = price(used, plan_kwh)
     kg = float(sim.quantity_kg)
     total_kwh = used + (float(sim.energy) if live else 0.0)
@@ -153,7 +155,7 @@ def live_summary(cooker, sim):
     out = _info()
     out.update({
         "live": live, "quantity_kg": kg,
-        "plan_kwh": round(plan_kwh, 4), "plan_cost": plan_cost,
+        "plan_kwh": round(plan_kwh, 4), "plan_need_kwh": round(need_kwh, 4), "plan_cost": plan_cost,
         "plan_cost_per_kg": round(plan_cost / kg, 2) if kg > 0 else None,
         "this_cook": this_cost, "this_kwh": round(kwh, 4), "breakdown": parts,
         "avg_rate": round(this_cost / kwh, 2) if kwh > 1e-9 else rate * _vat_factor(),

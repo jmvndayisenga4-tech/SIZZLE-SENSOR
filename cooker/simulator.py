@@ -33,8 +33,10 @@ FOODS = {
 }
 
 # ---- how much energy and time a batch needs (so cost can be shown BEFORE cooking) -------------
-MIN_KG = 0.10                  # smallest batch
-KG_STEP = 0.05
+MIN_KG = 0.05                  # smallest amount accepted (kg)
+MAX_INPUT_KG = 100.0           # sanity limit for typed amounts (typo protection, not a cooking limit)
+KG_STEP = 0.01                 # amounts are kept to 10 g
+MAXKG_SEARCH_STEP = 0.05       # resolution used to find the largest single batch under the cap
 POT_KJ_PER_K = 1.1             # aluminium pot + lid (about 1.2 kg)
 WATER_KJ_PER_KG_K = 4.186
 EFF_PRESSURE, EFF_OPEN = 0.85, 0.75           # share of electricity that reaches the pot contents
@@ -61,23 +63,23 @@ def energy_estimate_kwh(key, kg):
 
 
 def _max_kg(key):
-    kg = best = MIN_KG
+    """Largest batch that a single cook can finish inside the 0.50 kWh cap (a hint, not a limit)."""
+    kg = best = 0.10
     while kg <= 20.0:
         if energy_estimate_kwh(key, kg) <= ENERGY_CAP_KWH:
             best = kg
-        kg = round(kg + KG_STEP, 2)
+        kg = round(kg + MAXKG_SEARCH_STEP, 2)
     return round(best, 2)
 
 
 for _k, _f in FOODS.items():
     _f["min_kg"] = MIN_KG
-    _f["max_kg"] = _max_kg(_k)      # the biggest batch that still fits inside the 0.50 kWh cap
+    _f["max_kg"] = _max_kg(_k)      # biggest batch one cook can finish inside the 0.50 kWh cap
 
 
 def clamp_kg(key, kg):
-    f = FOODS[key]
-    kg = round(round(float(kg) / KG_STEP) * KG_STEP, 2)
-    return max(f["min_kg"], min(f["max_kg"], kg))
+    """Keep an amount to 10 g and inside the sanity range (any amount in between is allowed)."""
+    return max(MIN_KG, min(MAX_INPUT_KG, round(float(kg), 2)))
 
 
 MODES = ("AUTO", "MANUAL", "SEMI")
@@ -197,8 +199,9 @@ class SmartCooker:
                 else:
                     self.temperature = max(self.target_temp - 1.5, self.temperature - 0.05 * sim_dt)
 
-                # A full cook at 100 % power uses this batch's energy budget (never more than the cap).
-                budget = min(self.energy_budget or ENERGY_CAP_KWH, ENERGY_CAP_KWH)
+                # A full cook at 100 % power uses this batch's energy budget. If the batch needs more than
+                # the cap, the 0.50 kWh safety stop below ends the cook early (food not fully cooked).
+                budget = self.energy_budget or ENERGY_CAP_KWH
                 increment = (self.power / 100.0) * (budget / cooking_seconds) * sim_dt
                 self.energy = min(self.energy + increment, ENERGY_CAP_KWH)
 
@@ -381,13 +384,11 @@ class SmartCooker:
             kg = float(kg)
         except (TypeError, ValueError):
             raise ValueError("amount must be a number of kg")
+        if not (kg == kg) or kg in (float("inf"), float("-inf")) or kg < MIN_KG - 1e-9 or kg > MAX_INPUT_KG:
+            raise ValueError("enter an amount between %g and %g kg" % (MIN_KG, MAX_INPUT_KG))
         with self.lock:
             if self.state in COOKING_STATES:
                 return False, "stop the cook before changing the amount"
-            f = FOODS[self.current_food]
-            if kg < f["min_kg"] - 1e-9 or kg > f["max_kg"] + 1e-9:
-                raise ValueError("%s: choose %.2f to %.2f kg (more would need over %.2f kWh)"
-                                 % (f["label"], f["min_kg"], f["max_kg"], ENERGY_CAP_KWH))
             self.quantity_kg = clamp_kg(self.current_food, kg)
             self._reset_locked()
             return True, "amount=%.2f kg" % self.quantity_kg
@@ -460,7 +461,7 @@ class SmartCooker:
                 "foods": {
                     k: {"label": v["label"], "icon": v["icon"], "time": v["time"],
                         "temp": v["temp"], "pressure": v["pressure"], "ref_kg": v["ref_kg"],
-                        "min_kg": v["min_kg"], "max_kg": v["max_kg"], "water": v["water"]}
+                        "min_kg": MIN_KG, "max_kg": v["max_kg"], "water": v["water"]}
                     for k, v in FOODS.items()
                 },
                 "modes": list(MODES),
@@ -474,6 +475,9 @@ class SmartCooker:
                 "kg_step": KG_STEP,
                 "water_litres": round(self.quantity_kg * food["water"], 2),
                 "energy_budget": round(self.energy_budget, 4),
+                "over_cap": self.energy_budget > ENERGY_CAP_KWH + 1e-9,
+                "cap_fraction": round(min(1.0, ENERGY_CAP_KWH / self.energy_budget), 3) if self.energy_budget else 1.0,
+                "batches_needed": max(1, int(-(-self.quantity_kg // food["max_kg"]))) if food["max_kg"] else 1,
                 "plan_minutes": round(self.cooking_seconds / 60.0, 1),
                 "energy_pct": round(min(100.0, self.energy / ENERGY_CAP_KWH * 100.0), 1),
                 "elapsed": round(self.elapsed, 1),

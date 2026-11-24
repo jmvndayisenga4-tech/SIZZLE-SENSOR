@@ -26,11 +26,11 @@ for k, f in S.FOODS.items():
     ref = S.energy_estimate_kwh(k, f["ref_kg"])
     check(0.1 < ref < S.ENERGY_CAP_KWH, f"{k}: the usual batch ({f['ref_kg']} kg) needs {ref:.2f} kWh, inside the cap")
     check(S.energy_estimate_kwh(k, f["max_kg"]) <= S.ENERGY_CAP_KWH, f"{k}: the largest batch ({f['max_kg']} kg) still fits the 0.50 kWh cap")
-    check(S.energy_estimate_kwh(k, f["max_kg"] + S.KG_STEP) > S.ENERGY_CAP_KWH, f"{k}: one more step would exceed the cap")
+    check(S.energy_estimate_kwh(k, f["max_kg"] + S.MAXKG_SEARCH_STEP) > S.ENERGY_CAP_KWH, f"{k}: a bit more than that needs more than the cap")
     check(S.energy_estimate_kwh(k, 1.0) > S.energy_estimate_kwh(k, 0.5), f"{k}: more food needs more energy")
     check(S.cook_seconds_for(k, f["max_kg"]) > S.cook_seconds_for(k, f["min_kg"]), f"{k}: bigger batches take longer")
     check(S.cook_seconds_for(k, f["ref_kg"]) == f["time"] * 60, f"{k}: the usual batch keeps the standard cooking time")
-check(S.clamp_kg("rice", 0.77) == 0.75 and S.clamp_kg("rice", 99) == S.FOODS["rice"]["max_kg"] and S.clamp_kg("rice", 0) == 0.1, "kg is rounded to 0.05 and clamped")
+check(S.clamp_kg("rice", 0.777) == 0.78 and S.clamp_kg("rice", 0) == 0.05 and S.clamp_kg("rice", 999) == 100.0, "amounts keep 10 g precision; only absurd values are clamped")
 
 # --- 2. through the API --------------------------------------------------------------------
 User = get_user_model()
@@ -58,9 +58,15 @@ check(near(st["cost"]["plan_cost_per_kg"], st["cost"]["plan_cost"] / 0.9, 0.01),
 check(near(st["remaining"], st["cooking_seconds"], 0.5) and near(st["water_litres"], 2.25), "timer and water follow the amount")
 
 r = cmd("quantity", 5)
-check(r.status_code == 400 and "kg" in r.json()["error"], "an amount that would break the 0.50 kWh cap is refused")
+st = r.json()
+check(r.status_code == 200 and st["quantity_kg"] == 5.0, "any amount is accepted: 5 kg of beans")
+check(st["over_cap"] and st["batches_needed"] == 6 and st["cap_fraction"] < 0.3, "a batch over the cap is flagged, with how many batches would fit")
+check(near(st["cost"]["plan_kwh"], 0.5, 0.0001) and st["cost"]["plan_need_kwh"] > 0.5, "plan cost is limited to what the cap lets the cooker use")
 check(cmd("quantity", "abc").status_code == 400, "non-numeric amount is refused")
-check(cmd("quantity", 0.01).status_code == 400, "too small an amount is refused")
+check(cmd("quantity", "nan").status_code == 400, "NaN is refused")
+check(cmd("quantity", 0).status_code == 400 and cmd("quantity", -2).status_code == 400, "zero and negative amounts are refused")
+check(cmd("quantity", 101).status_code == 400, "typo protection above 100 kg")
+check(cmd("quantity", 0.05).status_code == 200 and cmd("quantity", 0.37).json()["quantity_kg"] == 0.37, "small and fractional amounts work (0.05, 0.37 kg)")
 
 cmd("food", "rice")
 check(state()["quantity_kg"] == S.FOODS["rice"]["ref_kg"], "changing food goes back to that food's usual batch")
@@ -83,7 +89,15 @@ s2 = CookSession.objects.order_by("-ended_at").first()
 check(s2.kwh < s1.kwh and float(s2.cost) < float(s1.cost), "0.3 kg costs less than 1.2 kg")
 
 r = c.get(f"/c/{ck.pk}/")
-check(b'id="qtySlider"' in r.content and b'id="planLine"' in r.content, "cooker page has the amount slider and plan line")
+check(b'id="qtyInput"' in r.content and b'id="planLine"' in r.content, "cooker page has the amount slider and plan line")
+
+# a batch bigger than the cap allows: the cooker stops at the 0.50 kWh safety cap
+cmd("quantity", 3)                      # 3 kg of rice needs more than 0.50 kWh
+st = state(); check(st["over_cap"], "3 kg of rice is over the cap")
+cmd("start"); fast_forward(2000); st = state()
+check(st["state"] == "READY" and st["ready_reason"] == "energy cap reached" and near(st["energy"], 0.5, 0.0005), "over-cap cook stops at the 0.50 kWh cap")
+s3 = CookSession.objects.order_by("-ended_at").first()
+check(near(s3.quantity_kg, 3.0) and near(s3.kwh, 0.5, 0.0005) and s3.reason == "energy cap reached", "it is booked with its kg and the energy actually used")
 
 # --- 3. old saved cookers --------------------------------------------------------------------
 ck.state_data = {"state": "IDLE", "current_food": "cassava", "energy": 0.0}; ck.save()
