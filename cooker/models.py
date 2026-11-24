@@ -26,6 +26,7 @@ class CookSession(models.Model):
     cooker_name = models.CharField(max_length=60, blank=True)
     food = models.CharField(max_length=20, blank=True)
     mode = models.CharField(max_length=10, blank=True)
+    quantity_kg = models.FloatField(default=0)                  # amount of food in the pot
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField()
     seconds = models.FloatField(default=0)                      # simulated cooking time

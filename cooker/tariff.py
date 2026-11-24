@@ -107,7 +107,7 @@ def record_cook(cooker, d):
     kwh = float(d["kwh"])
     return CookSession.objects.create(
         owner_id=cooker.owner_id, cooker=cooker, cooker_name=cooker.name, food=d.get("food", ""),
-        mode=d.get("mode", ""), ended_at=ended, seconds=float(d.get("seconds") or 0), kwh=kwh,
+        mode=d.get("mode", ""), quantity_kg=float(d.get("kg") or 0), ended_at=ended, seconds=float(d.get("seconds") or 0), kwh=kwh,
         started_at=datetime.fromtimestamp(started, tz=dt_timezone.utc) if started else None,
         cost=Decimal(str(cost)), avg_rate=Decimal(str(round(cost / kwh, 2) if kwh else 0)),
         breakdown=parts, reason=d.get("reason", ""),
@@ -117,6 +117,8 @@ def record_cook(cooker, d):
 def _session_dict(s):
     return {
         "food": s.food, "kwh": round(s.kwh, 4), "cost": float(s.cost), "reason": s.reason,
+        "kg": round(s.quantity_kg, 2),
+        "cost_per_kg": round(float(s.cost) / s.quantity_kg, 2) if s.quantity_kg > 0 else None,
         "ended_at": s.ended_at.timestamp(), "cooker": s.cooker_name,
     }
 
@@ -141,12 +143,19 @@ def live_summary(cooker, sim):
         kwh = last.kwh if last else 0.0
         this_cost = float(last.cost) if last else 0.0
         parts = last.breakdown if last else []
+    # plan for the chosen amount: what a full cook of it will use and cost, before pressing start
+    plan_kwh = float(sim.energy_budget)
+    plan_cost, _ = price(used, plan_kwh)
+    kg = float(sim.quantity_kg)
     total_kwh = used + (float(sim.energy) if live else 0.0)
     month_cost, _ = price(0.0, total_kwh)
     idx, rate, left = block_at(total_kwh)
     out = _info()
     out.update({
-        "live": live, "this_cook": this_cost, "this_kwh": round(kwh, 4), "breakdown": parts,
+        "live": live, "quantity_kg": kg,
+        "plan_kwh": round(plan_kwh, 4), "plan_cost": plan_cost,
+        "plan_cost_per_kg": round(plan_cost / kg, 2) if kg > 0 else None,
+        "this_cook": this_cost, "this_kwh": round(kwh, 4), "breakdown": parts,
         "avg_rate": round(this_cost / kwh, 2) if kwh > 1e-9 else rate * _vat_factor(),
         "rate": round(rate * _vat_factor(), 2), "block": idx, "block_label": block_label(idx),
         "block_left": left,

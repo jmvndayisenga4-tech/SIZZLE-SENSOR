@@ -62,6 +62,28 @@ Every finished cook is priced at the REG (Rwanda Energy Group) residential tarif
 
 Run the cost checks with `python test_cost.py`.
 
+## Amount of food (kg)
+
+Pick how much you are cooking with the **Amount of food** slider on the cooker page (0.05 kg
+steps). Before you press start it shows the plan: kWh, cost at the REG tariff, RWF per kg,
+minutes, and how much water to add.
+
+* Energy comes from heating physics, not a fixed number: the food, its water and the pot are
+  heated to the food's cooking temperature (specific heat x mass x temperature rise, divided by
+  the cooker's efficiency) plus the heat lost while it simmers. See `energy_estimate_kwh` in
+  `cooker/simulator.py`; the constants per food (`cp`, `water`, `ref_kg`) are at the top of that file.
+* Cooking time grows a little with the batch (the usual batch keeps the standard time).
+* Each food has a largest batch (for example about 0.9 kg of beans) so a cook never needs more
+  than the 0.50 kWh cap. Asking for more is refused with a message.
+* The amount can only be changed while the cooker is idle or ready. Changing food goes back to
+  that food's usual batch.
+* Every booked cook stores its kg, so **Recent cooks** shows kg and RWF per kg.
+* Run `python manage.py migrate` after upgrading (adds the `quantity_kg` column).
+* The numbers are a model, not measurements: calibrate `cp`, `water`, the efficiencies and
+  simmer losses against readings from the real prototype's energy meter.
+
+Run the checks with `python test_quantity.py`.
+
 ## Run locally (Windows PowerShell)
 
 ```powershell

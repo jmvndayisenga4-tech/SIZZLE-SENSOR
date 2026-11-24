@@ -177,6 +177,8 @@
       left.textContent = (r.food ? r.food.charAt(0).toUpperCase() + r.food.slice(1) : "Cook") + " ";
       var sm = document.createElement("small");
       sm.textContent = when.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) +
+        (r.kg ? " · " + money(r.kg, 2) + " kg" : "") +
+        (r.cost_per_kg ? " · " + money(r.cost_per_kg, 0) + " " + c.currency + "/kg" : "") +
         (r.reason ? " · " + r.reason : "");
       left.appendChild(sm);
       var kwh = document.createElement("span");
@@ -187,13 +189,34 @@
       list.appendChild(row);
     });
     var rc = $("readyCost");
-    if (rc) rc.textContent = "This cook: " + money(c.this_kwh, 3) + " kWh = " + money(c.this_cook, 2) + " " + c.currency;
+    if (rc) rc.textContent = "This cook: " + (c.recent.length && c.recent[0].kg ? money(c.recent[0].kg, 2) + " kg, " : "") +
+      money(c.this_kwh, 3) + " kWh = " + money(c.this_cook, 2) + " " + c.currency;
+  }
+
+  /* ---------- amount (kg) + plan ---------- */
+  function renderAmount(st) {
+    var q = $("qtySlider");
+    if (!q || st.quantity_kg === undefined) return;
+    var f = st.foods && st.foods[st.food];
+    if (f) { q.min = f.min_kg; q.max = f.max_kg; q.step = st.kg_step; }
+    if (document.activeElement !== q) q.value = st.quantity_kg;
+    $("qtyVal").textContent = Number(q.value).toFixed(2) + " kg";
+    q.disabled = ["PREHEAT", "BOIL", "SIMMER"].indexOf(st.state) >= 0;
+    var c = st.cost;
+    if (!c) return;
+    var line = (f ? f.label + ", " : "") + st.quantity_kg.toFixed(2) + " kg: about " + money(st.energy_budget, 2) +
+      " kWh, " + money(c.plan_cost, 0) + " " + c.currency;
+    if (c.plan_cost_per_kg) line += " (" + money(c.plan_cost_per_kg, 0) + " " + c.currency + "/kg)";
+    line += ", " + Math.round(st.plan_minutes) + " min, add " + money(st.water_litres, 2) + " L water.";
+    if (f) line += " Largest batch: " + f.max_kg.toFixed(2) + " kg (0.50 kWh cap).";
+    $("planLine").textContent = line;
   }
 
   /* ---------- render ---------- */
   function render(st) {
     lastState = st;
     renderCost(st.cost);
+    renderAmount(st);
 
     $("temp").textContent = st.temperature.toFixed(1);
     $("energy").textContent = st.energy.toFixed(3);
@@ -286,6 +309,10 @@
       s.addEventListener("input", function () { $(a[1]).textContent = s.value + a[2]; });
       s.addEventListener("change", function () { send(a[3], Number(s.value)); s.blur(); });
     });
+
+    var qs = $("qtySlider");
+    qs.addEventListener("input", function () { $("qtyVal").textContent = Number(qs.value).toFixed(2) + " kg"; });
+    qs.addEventListener("change", function () { send("quantity", Number(qs.value)); qs.blur(); });
 
     if (SIMPLE) {
       $("charts").classList.add("d-none");

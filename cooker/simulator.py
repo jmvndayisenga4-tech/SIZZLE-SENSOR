@@ -16,13 +16,69 @@ AMBIENT_TEMP = 24.0            # room temperature (deg C)
 HISTORY_LEN = 180              # ~90 s of samples at 0.5 s/tick
 MAX_CATCHUP_SECONDS = 4 * 3600  # never replay more than this after a long absence
 
+# Per food: label/icon, base cook time (min) and temperature for the reference batch ``ref_kg``,
+# pressure cooking, ``cp`` = specific heat of the raw food (kJ/kg.K) and ``water`` = litres of
+# water added per kg of food.
 FOODS = {
-    "beans":   {"label": "Beans",   "icon": "\U0001FAD8", "time": 45, "temp": 115, "pressure": True},
-    "maize":   {"label": "Maize",   "icon": "\U0001F33D", "time": 30, "temp": 110, "pressure": True},
-    "cassava": {"label": "Cassava", "icon": "\U0001F360", "time": 35, "temp": 112, "pressure": True},
-    "rice":    {"label": "Rice",    "icon": "\U0001F35A", "time": 20, "temp": 100, "pressure": False},
-    "potato":  {"label": "Potato",  "icon": "\U0001F954", "time": 25, "temp": 105, "pressure": False},
+    "beans":   {"label": "Beans",   "icon": "\U0001FAD8", "time": 45, "temp": 115, "pressure": True,
+                "ref_kg": 0.50, "cp": 1.8, "water": 2.5},
+    "maize":   {"label": "Maize",   "icon": "\U0001F33D", "time": 30, "temp": 110, "pressure": True,
+                "ref_kg": 0.50, "cp": 1.8, "water": 2.0},
+    "cassava": {"label": "Cassava", "icon": "\U0001F360", "time": 35, "temp": 112, "pressure": True,
+                "ref_kg": 1.00, "cp": 3.3, "water": 0.8},
+    "rice":    {"label": "Rice",    "icon": "\U0001F35A", "time": 20, "temp": 100, "pressure": False,
+                "ref_kg": 0.50, "cp": 1.8, "water": 1.5},
+    "potato":  {"label": "Potato",  "icon": "\U0001F954", "time": 25, "temp": 105, "pressure": False,
+                "ref_kg": 1.00, "cp": 3.4, "water": 0.6},
 }
+
+# ---- how much energy and time a batch needs (so cost can be shown BEFORE cooking) -------------
+MIN_KG = 0.10                  # smallest batch
+KG_STEP = 0.05
+POT_KJ_PER_K = 1.1             # aluminium pot + lid (about 1.2 kg)
+WATER_KJ_PER_KG_K = 4.186
+EFF_PRESSURE, EFF_OPEN = 0.85, 0.75           # share of electricity that reaches the pot contents
+HOLD_W_PRESSURE, HOLD_W_OPEN = 150.0, 250.0  # heat lost to the room while it simmers
+
+
+def cook_seconds_for(key, kg):
+    """Cooking time for ``kg`` of ``key``: the reference time at the reference batch, a bit longer for more."""
+    f = FOODS[key]
+    factor = 0.85 + 0.15 * (float(kg) / f["ref_kg"])
+    return int(round(f["time"] * 60 * max(0.7, min(1.6, factor))))
+
+
+def energy_estimate_kwh(key, kg):
+    """Electricity for one full cook: heat food + water + pot to the target, plus simmer losses."""
+    f = FOODS[key]
+    kg = float(kg)
+    heat_cap = kg * f["cp"] + kg * f["water"] * WATER_KJ_PER_KG_K + POT_KJ_PER_K       # kJ per K
+    eff = EFF_PRESSURE if f["pressure"] else EFF_OPEN
+    hold_w = HOLD_W_PRESSURE if f["pressure"] else HOLD_W_OPEN
+    heating = heat_cap * (f["temp"] - AMBIENT_TEMP) / 3600.0 / eff
+    holding = hold_w / 1000.0 * cook_seconds_for(key, kg) / 3600.0
+    return heating + holding
+
+
+def _max_kg(key):
+    kg = best = MIN_KG
+    while kg <= 20.0:
+        if energy_estimate_kwh(key, kg) <= ENERGY_CAP_KWH:
+            best = kg
+        kg = round(kg + KG_STEP, 2)
+    return round(best, 2)
+
+
+for _k, _f in FOODS.items():
+    _f["min_kg"] = MIN_KG
+    _f["max_kg"] = _max_kg(_k)      # the biggest batch that still fits inside the 0.50 kWh cap
+
+
+def clamp_kg(key, kg):
+    f = FOODS[key]
+    kg = round(round(float(kg) / KG_STEP) * KG_STEP, 2)
+    return max(f["min_kg"], min(f["max_kg"], kg))
+
 
 MODES = ("AUTO", "MANUAL", "SEMI")
 COOKING_STATES = ("PREHEAT", "BOIL", "SIMMER")
@@ -37,6 +93,7 @@ class SmartCooker:
         self.state = "IDLE"            # IDLE | PREHEAT | BOIL | SIMMER | READY
         self.mode = "AUTO"
         self.current_food = "beans"
+        self.quantity_kg = FOODS[self.current_food]["ref_kg"]     # how much food is in the pot
 
         self.power = 0
         self.pressure = FOODS[self.current_food]["pressure"]
@@ -46,8 +103,10 @@ class SmartCooker:
         self.temperature = AMBIENT_TEMP
         self.energy = 0.0
         self.elapsed = 0.0
-        self.cooking_seconds = FOODS[self.current_food]["time"] * 60
-        self.remaining = float(self.cooking_seconds)
+        self.cooking_seconds = 0
+        self.remaining = 0.0
+        self.energy_budget = 0.0       # kWh a full cook of this batch needs (see energy_estimate_kwh)
+        self._plan()
 
         self.should_shutdown = False
         self.started_at = None
@@ -61,6 +120,12 @@ class SmartCooker:
         self._record()
 
     # -- helpers -----------------------------------------------------------
+    def _plan(self):
+        """Time and energy for the chosen food and amount (call whenever either changes while idle)."""
+        self.cooking_seconds = cook_seconds_for(self.current_food, self.quantity_kg)
+        self.remaining = float(self.cooking_seconds)
+        self.energy_budget = round(energy_estimate_kwh(self.current_food, self.quantity_kg), 4)
+
     def _record(self):
         self.history.append(
             {
@@ -79,7 +144,7 @@ class SmartCooker:
         if self.energy > 1e-6:
             self.finished_cooks.append({
                 "food": self.current_food, "mode": self.mode, "started_at": self.started_at,
-                "ended_at": time.time(), "kwh": round(self.energy, 4),
+                "ended_at": time.time(), "kwh": round(self.energy, 4), "kg": self.quantity_kg,
                 "seconds": round(self.elapsed, 1), "reason": reason,
             })
             del self.finished_cooks[:-50]
@@ -99,8 +164,7 @@ class SmartCooker:
         self.power = 0
         self.energy = 0.0
         self.elapsed = 0.0
-        self.cooking_seconds = FOODS[self.current_food]["time"] * 60
-        self.remaining = float(self.cooking_seconds)
+        self._plan()
         self.should_shutdown = False
         self.started_at = None
         self.ready_at = None
@@ -120,8 +184,10 @@ class SmartCooker:
             if self.state in COOKING_STATES:
                 food = FOODS[self.current_food]
                 sim_dt = dt * self.sim_speed
+                if self.remaining > 0:
+                    sim_dt = min(sim_dt, self.remaining)     # do not run past the end of the cook
 
-                cooking_seconds = food["time"] * 60
+                cooking_seconds = float(self.cooking_seconds) or 1.0
                 base_rate = 70.0 / cooking_seconds
                 pressure_boost = 1.35 if self.pressure else 1.0
                 heating_rate = (self.power / 100.0) * base_rate * pressure_boost * self.sim_speed
@@ -131,8 +197,9 @@ class SmartCooker:
                 else:
                     self.temperature = max(self.target_temp - 1.5, self.temperature - 0.05 * sim_dt)
 
-                # Calibrated so a full cook at 100 % power uses exactly the cap.
-                increment = (self.power / 100.0) * (ENERGY_CAP_KWH / cooking_seconds) * sim_dt
+                # A full cook at 100 % power uses this batch's energy budget (never more than the cap).
+                budget = min(self.energy_budget or ENERGY_CAP_KWH, ENERGY_CAP_KWH)
+                increment = (self.power / 100.0) * (budget / cooking_seconds) * sim_dt
                 self.energy = min(self.energy + increment, ENERGY_CAP_KWH)
 
                 self.elapsed += sim_dt
@@ -169,7 +236,7 @@ class SmartCooker:
         "state", "mode", "current_food", "power", "pressure", "target_temp", "sim_speed",
         "temperature", "energy", "elapsed", "cooking_seconds", "remaining",
         "should_shutdown", "started_at", "ready_at", "ready_reason",
-        "cook_open", "finished_cooks",
+        "cook_open", "finished_cooks", "quantity_kg", "energy_budget",
     )
 
     def to_dict(self):
@@ -190,6 +257,14 @@ class SmartCooker:
                 setattr(c, k, data[k])
         if c.current_food not in FOODS:
             c.current_food = "beans"
+        if "quantity_kg" not in data:                       # saved before amounts existed
+            c.quantity_kg = FOODS[c.current_food]["ref_kg"]
+        try:
+            c.quantity_kg = clamp_kg(c.current_food, c.quantity_kg)
+        except (TypeError, ValueError):
+            c.quantity_kg = FOODS[c.current_food]["ref_kg"]
+        if not data.get("energy_budget"):                  # saved before amounts existed
+            c.energy_budget = round(energy_estimate_kwh(c.current_food, c.quantity_kg), 4)
         if c.mode not in MODES:
             c.mode = "AUTO"
         if c.state not in ("IDLE", "READY") + COOKING_STATES:
@@ -232,8 +307,7 @@ class SmartCooker:
             self.should_shutdown = False
             self.energy = 0.0
             self.elapsed = 0.0
-            self.cooking_seconds = FOODS[self.current_food]["time"] * 60
-            self.remaining = float(self.cooking_seconds)
+            self._plan()
             self.ready_at = None
             self.ready_reason = None
             self.started_at = time.time()
@@ -281,8 +355,7 @@ class SmartCooker:
                     self.power = 0
                     self.energy = 0.0
                     self.elapsed = 0.0
-                    self.cooking_seconds = food["time"] * 60
-                    self.remaining = float(self.cooking_seconds)
+                    self._plan()
                     self.ready_at = None
                     self.ready_reason = None
                     self.state = "IDLE"
@@ -297,11 +370,27 @@ class SmartCooker:
 
         with self.lock:
             self.current_food = key
-            self.cooking_seconds = FOODS[key]["time"] * 60
+            self.quantity_kg = FOODS[key]["ref_kg"]       # each food starts at its usual batch
             self.target_temp = float(FOODS[key]["temp"])
             self.pressure = FOODS[key]["pressure"]
             self._reset_locked()
             return True, "food=" + key
+
+    def set_quantity(self, kg):
+        try:
+            kg = float(kg)
+        except (TypeError, ValueError):
+            raise ValueError("amount must be a number of kg")
+        with self.lock:
+            if self.state in COOKING_STATES:
+                return False, "stop the cook before changing the amount"
+            f = FOODS[self.current_food]
+            if kg < f["min_kg"] - 1e-9 or kg > f["max_kg"] + 1e-9:
+                raise ValueError("%s: choose %.2f to %.2f kg (more would need over %.2f kWh)"
+                                 % (f["label"], f["min_kg"], f["max_kg"], ENERGY_CAP_KWH))
+            self.quantity_kg = clamp_kg(self.current_food, kg)
+            self._reset_locked()
+            return True, "amount=%.2f kg" % self.quantity_kg
 
     def set_power(self, power):
         try:
@@ -346,6 +435,7 @@ class SmartCooker:
             "reset": lambda: self.reset_to_idle(),
             "mode": lambda: self.set_mode(value),
             "food": lambda: self.change_food(value),
+            "quantity": lambda: self.set_quantity(value),
             "power": lambda: self.set_power(value),
             "pressure": lambda: self.set_pressure(value),
             "target": lambda: self.set_target_temp(value),
@@ -369,7 +459,8 @@ class SmartCooker:
                 "food_icon": food["icon"],
                 "foods": {
                     k: {"label": v["label"], "icon": v["icon"], "time": v["time"],
-                        "temp": v["temp"], "pressure": v["pressure"]}
+                        "temp": v["temp"], "pressure": v["pressure"], "ref_kg": v["ref_kg"],
+                        "min_kg": v["min_kg"], "max_kg": v["max_kg"], "water": v["water"]}
                     for k, v in FOODS.items()
                 },
                 "modes": list(MODES),
@@ -379,6 +470,11 @@ class SmartCooker:
                 "target_temp": round(self.target_temp, 1),
                 "energy": round(self.energy, 4),
                 "energy_cap": ENERGY_CAP_KWH,
+                "quantity_kg": self.quantity_kg,
+                "kg_step": KG_STEP,
+                "water_litres": round(self.quantity_kg * food["water"], 2),
+                "energy_budget": round(self.energy_budget, 4),
+                "plan_minutes": round(self.cooking_seconds / 60.0, 1),
                 "energy_pct": round(min(100.0, self.energy / ENERGY_CAP_KWH * 100.0), 1),
                 "elapsed": round(self.elapsed, 1),
                 "remaining": round(self.remaining, 1),
